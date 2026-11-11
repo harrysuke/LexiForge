@@ -1,0 +1,15 @@
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\bin\Debug\net10.0\lexiforge-balancesim.exe
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\bin\Debug\net10.0\lexiforge-balancesim.deps.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\bin\Debug\net10.0\lexiforge-balancesim.runtimeconfig.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\bin\Debug\net10.0\lexiforge-balancesim.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\bin\Debug\net10.0\lexiforge-balancesim.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.AssemblyInfoInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.AssemblyInfo.cs
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.csproj.CoreCompileInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.sourcelink.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\lexiforge-balancesim.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\refint\lexiforge-balancesim.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\lexiforge-balancesim.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\BalanceSim.genruntimeconfig.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\BalanceSim\obj\Debug\net10.0\ref\lexiforge-balancesim.dll

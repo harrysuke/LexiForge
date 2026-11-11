@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "1.0.0",
+  "configVersion": "lexiforge-0.1.0",
+  "notes": "Single source of truth. Shipped as res://data/balance_config.json. Remote config may override with a signed payload; local values are always the fallback.",
+
+  "difficulty": {
+    "formula": "clamp(4*(wordCount-3) + 5*(bankSize-3) + 4.5*(avgWordLength-3) + 18*rarity + breatherBonus, 5, 95)",
+    "weights": { "perExtraWord": 4.0, "perExtraBankLetter": 5.0, "perExtraAvgLength": 4.5, "rarity": 18.0 },
+    "breatherBonus": -8.0,
+    "breatherEveryNForge": 5,
+    "breatherWordPenalty": 1,
+    "breatherRarityMultiplier": 0.6,
+    "minDI": 5.0,
+    "maxDI": 95.0,
+    "shape": {
+      "curve": "t = 1 - exp(-forgeIndex / 110)",
+      "decayForgeConstant": 110.0,
+      "wordCount": { "base": 3, "scale": 9 },
+      "bankSize": { "base": 3, "scale": 3, "exponent": 0.8 },
+      "avgWordLength": { "base": 3.3, "scale": 2.5 },
+      "rarity": { "base": 0.02, "scale": 0.28 }
+    },
+    "parTime": {
+      "formula": "min(cap, base + linear*DI + quadratic*DI*DI)",
+      "base": 14.0,
+      "linear": 1.15,
+      "quadratic": 0.004,
+      "capSeconds": 120.0
+    },
+    "lateGameRule": "Above DI 65 increase rarity and intersection density only; never wordCount or bankSize.",
+    "contentContract": {
+      "minShortWordsLengthLTE4": 2,
+      "keystoneWords": 1,
+      "minGridIntersections": 2,
+      "maxAbandonRate": 0.08,
+      "maxHintsPerForge": 1.2
+    },
+    "antiFrustration": {
+      "freeNudgeAfterSeconds": 45,
+      "freeNudgePerWindow": 1,
+      "freeLetterRevealAfterWrongAttempts": 3,
+      "shuffle": "free_unlimited"
+    },
+    "packs": [
+      { "firstForge": 1,   "lastForge": 20,  "band": [5, 18],  "theme": "Emberworks",   "targetMedianSolveSeconds": 28 },
+      { "firstForge": 21,  "lastForge": 60,  "band": [15, 30], "theme": "Tidepool",     "targetMedianSolveSeconds": 45 },
+      { "firstForge": 61,  "lastForge": 120, "band": [26, 43], "theme": "Observatory",  "targetMedianSolveSeconds": 62 },
+      { "firstForge": 121, "lastForge": 200, "band": [40, 55], "theme": "Bakery",       "targetMedianSolveSeconds": 78 },
+      { "firstForge": 201, "lastForge": 300, "band": [52, 62], "theme": "Herbarium",    "targetMedianSolveSeconds": 92 },
+      { "firstForge": 301, "lastForge": 400, "band": [58, 68], "theme": "Cartographer", "targetMedianSolveSeconds": 100 }
+    ]
+  },
+
+  "economy": {
+    "coins": {
+      "base": 20,
+      "perSolutionWord": 6,
+      "perBonusWord": 3,
+      "bonusWordCap": 8,
+      "starBonus": { "1": 0, "2": 15, "3": 40 },
+      "hintCostBase": 90,
+      "hintCostStep": 60,
+      "maxHintsPerForge": 3,
+      "flow": { "stepPerCleanFind": 0.15, "capMultiplier": 2.5, "resetOnWrongWord": true },
+      "coinUnit": 100
+    },
+    "sinks": {
+      "runeDraftReroll": 200,
+      "streakFreeze": 200,
+      "coolForge": 150,
+      "gildedForgeEntry": 600,
+      "atlasScene": { "base": 400, "step": 100, "max": 1200 },
+      "markCoinEquivalent": 200
+    },
+    "starRules": {
+      "3": { "maxHints": 0, "maxParMultiplier": 1.0, "maxWrongAttempts": 2 },
+      "2": { "maxHints": 1, "maxParMultiplier": 1.5 },
+      "1": {}
+    },
+    "noHardCurrency": true,
+    "noPaidCoinPack": true
+  },
+
+  "heat": {
+    "formula": "clamp(Heat + gainBase + gainPerDI*DI + gainPerParOverrun*min(1,max(0,solveTime/par-1)) - coolOnPerfectForge*perfect, 0, max)",
+    "gainBase": 8.0,
+    "gainPerDI": 0.20,
+    "gainPerParOverrun": 6.0,
+    "coolOnPerfectForge": 5.0,
+    "max": 100,
+    "maxForgesPerRun": 8,
+    "coolForgeReward": -25,
+    "runEndsAtHeat": 100,
+    "draftsAfterForges": [1, 3, 5]
+  },
+
+  "runes": [
+    { "id": "ember",   "name": "Ember",   "type": "score",   "rarity": "common",   "coinDeltaPct": 0.08, "diDelta": 0.0,  "effect": "+1 coin per letter in words of length >= 5" },
+    { "id": "echo",    "name": "Echo",    "type": "score",   "rarity": "rare",     "coinDeltaPct": 0.06, "diDelta": 0.0,  "effect": "Repeated-letter words raise Flow cap by 0.1 (max 3.0)" },
+    { "id": "prism",   "name": "Prism",   "type": "economy", "rarity": "common",   "coinDeltaPct": 0.05, "diDelta": 0.0,  "effect": "Bonus Jar coins x2" },
+    { "id": "anvil",   "name": "Anvil",   "type": "utility", "rarity": "common",   "coinDeltaPct": 0.0,  "diDelta": 0.0,  "effect": "+1 free hint per forge" },
+    { "id": "gale",    "name": "Gale",    "type": "utility", "rarity": "uncommon", "coinDeltaPct": -0.06,"diDelta": -6.0, "effect": "Letter bank gains 1 wild tile for the run" },
+    { "id": "quill",   "name": "Quill",   "type": "score",   "rarity": "uncommon", "coinDeltaPct": 0.07, "diDelta": 0.0,  "effect": "Perfect forges grant +2 clean cools" },
+    { "id": "ledger",  "name": "Ledger",  "type": "economy", "rarity": "common",   "coinDeltaPct": 0.04, "diDelta": 0.0,  "effect": "+25% coins from stars" },
+    { "id": "mirror",  "name": "Mirror",  "type": "utility", "rarity": "uncommon", "coinDeltaPct": 0.0,  "diDelta": 0.0,  "effect": "One free draft reroll per run" },
+    { "id": "spark",   "name": "Spark",   "type": "score",   "rarity": "common",   "coinDeltaPct": 0.05, "diDelta": 0.0,  "effect": "First word of a forge is worth x3 coins" },
+    { "id": "anchor",  "name": "Anchor",  "type": "utility", "rarity": "rare",     "coinDeltaPct": 0.09, "diDelta": 0.0,  "effect": "Heat gain -3 per forge" },
+    { "id": "guild",   "name": "Guild",   "type": "economy", "rarity": "uncommon", "coinDeltaPct": 0.0,  "diDelta": 0.0,  "effect": "+1 free Sponsor Mark at run end" },
+    { "id": "lens",    "name": "Lens",    "type": "utility", "rarity": "common",   "coinDeltaPct": -0.04,"diDelta": -4.0, "effect": "Reveals the length of every unfilled slot" }
+  ],
+  "runeDraft": {
+    "optionsPerDraft": 3,
+    "rarityWeights": { "common": 0.60, "uncommon": 0.30, "rare": 0.10 },
+    "guaranteeNonScoreOption": true,
+    "maxBuildCoinDeltaPct": 0.30,
+    "maxSingleRuneCoinDeltaPct": 0.10,
+    "tutorialFirstDraft": ["ember", "anvil", "gale"]
+  },
+
+  "marks": {
+    "sources": {
+      "rewardedAd": { "marks": 1, "appliesTo": "all_rewarded_placements", "dailyCap": 6, "bonusMarkEveryNAd": 3 },
+      "perfectDailyForge": { "marks": 1, "dailyCap": 1 },
+      "weeklyGildedForge": { "marks": 2, "weeklyCap": 2 },
+      "guildRune": { "marks": 1, "cap": "per_run" }
+    },
+    "sinks": {
+      "runeDraftReroll": 1,
+      "fourthRuneSlot": 2,
+      "forgeSeal": 2,
+      "gildedForgeEntry": 3,
+      "coolForge": 1,
+      "cosmeticSkins": [5, 20]
+    },
+    "hardRule": "Every Mark sink has a coin alternative and no progression node is Mark-only."
+  },
+
+  "ads": {
+    "global": {
+      "firstInterstitialForge": 12,
+      "firstInterstitialSession": 2,
+      "interstitialEveryNForges": 4,
+      "interstitialMinGapSeconds": 120,
+      "interstitialMaxPerDay": 3,
+      "suppressInterstitialWithinSecondsOfRewarded": 90,
+      "rewardedSoftCapPerUserPerDay": 8,
+      "appOpenMinSessions": 3,
+      "appOpenMinGapSeconds": 14400,
+      "appOpenMaxPerDay": 1,
+      "bannerEnabled": false,
+      "grantOnlyOnUserEarnedReward": true,
+      "idempotentRewardToken": true,
+      "preloadRewardedOnRunStart": 1,
+      "killSwitchRemoteConfigKey": "ads.interstitial.enabled",
+      "maxAdContentRating": "PG"
+    },
+    "minRewardedCoinUnits": 1.2,
+    "maxRewardedCoinUnits": 2.5,
+    "placements": [
+      { "id": "R_HINT",    "unit": "rewarded",    "trigger": "Hint button > watch instead",  "minForge": 3, "cooldownSeconds": 30,   "cap": "2 per forge",       "coinUnits": 1.5, "label": "Watch an ad for a free hint" },
+      { "id": "R_DOUBLE",  "unit": "rewarded",    "trigger": "Forge results card",           "minForge": 1, "cooldownSeconds": 60,   "cap": "1 per forge",       "coinUnits": 1.3, "label": "Watch an ad to double the haul" },
+      { "id": "R_MARK",    "unit": "rewarded",    "trigger": "Patron Board / run end",       "minForge": 5, "cooldownSeconds": 60,   "cap": "6 marks per day",   "coinUnits": 2.0, "label": "Watch a patron's sponsored message for 1 Mark" },
+      { "id": "R_COOL",    "unit": "rewarded",    "trigger": "Heat >= 100 run end",          "minForge": 1, "cooldownSeconds": 120,  "cap": "2 per run",         "coinUnits": 2.5, "label": "Watch an ad to cool the forge" },
+      { "id": "R_FREEZE",  "unit": "rewarded",    "trigger": "Streak at risk",               "minForge": 0, "cooldownSeconds": 86400,"cap": "1 per day",         "coinUnits": 2.0, "label": "Watch an ad to save your streak" },
+      { "id": "R_GIFT",    "unit": "rewarded",    "trigger": "Home screen gift",             "minForge": 0, "cooldownSeconds": 21600,"cap": "2 per day",         "coinUnits": 2.0, "label": "Watch an ad to open the daily gift" },
+      { "id": "R_REFILL",  "unit": "rewarded",    "trigger": "Coins < 100",                  "minForge": 0, "cooldownSeconds": 86400,"cap": "1 per day",         "coinUnits": 1.8, "label": "Watch an ad for 180 coins" },
+      { "id": "I_RUN_END", "unit": "interstitial","trigger": "Run results dismissed",        "minForge": 12,"cooldownSeconds": 120,  "cap": "3 per day",         "coinUnits": 0.0, "label": "Ad" },
+      { "id": "A_OPEN",    "unit": "app_open",    "trigger": "Cold start",                   "minForge": 0, "cooldownSeconds": 14400,"cap": "1 per day",         "coinUnits": 0.0, "label": "Ad" },
+      { "id": "B_HOME",    "unit": "banner",      "trigger": "never",                        "minForge": 0, "cooldownSeconds": 0,    "cap": "disabled in v1",    "coinUnits": 0.0, "label": "Ad" }
+    ],
+    "revenueAssumptions": {
+      "rewardedEcpmUsd": 12.0,
+      "interstitialEcpmUsd": 6.0,
+      "appOpenEcpmUsd": 3.5,
+      "rewardedOptInRate": 0.30,
+      "rewardedImpPerEngagedUserPerDay": 3.2,
+      "interstitialImpPerUserPerDay": 2.8,
+      "appOpenImpPerUserPerDay": 0.7,
+      "rewardedRevenueShare": 0.75,
+      "forgePassConversion": 0.02,
+      "forgePassPriceUsd": 4.99,
+      "blendedArpdauTargetUsd": [0.020, 0.040],
+      "stretchArpdauTargetUsd": [0.035, 0.060],
+      "simulationNote": "With the capped ad load above, the 10k-player Monte Carlo projects ~$0.023 blended ARPDAU. $0.035+ is a tier-1-weighted or mediation-uplift stretch goal, not the base case. Do not raise interstitial frequency to close the gap - raise rewarded value or eCPM instead."
+    },
+    "compliance": {
+      "umpConsentBeforeSdkInit": true,
+      "nonPersonalizedAdsOnConsentDenied": true,
+      "declarationNotDesignedForChildren": true,
+      "contentRating": "13+",
+      "visibleAdLabelOnEveryRewardedEntryPoint": true,
+      "noForcedAds": true,
+      "noEnergyOrLives": true,
+      "removeAdsIapDisclosure": "Forge Pass removes interstitials and app-open ads only; optional rewarded ads remain available by player choice."
+    }
+  },
+
+  "progression": {
+    "forgesPerPack": 20,
+    "packsPerChapter": 5,
+    "launchForgeCount": 400,
+    "atlasScenesPerChapter": 20,
+    "starsToUnlockAtlasPerPack": [40, 60],
+    "dailyForgeSeedEpoch": "2026-01-01",
+    "weeklyGildedForgeCount": 7,
+    "freeStreakFreezePerWeek": 1,
+    "firstSession": {
+      "forges": 5,
+      "targetSeconds": 150,
+      "interstitials": 0,
+      "scriptedFreeHintOnForge": 4,
+      "rewardedEntryPointsVisibleFromForge": 3
+    }
+  },
+
+  "kpis": {
+    "d1": 0.45, "d7": 0.20, "d30": 0.09,
+    "sessionsPerDay": 2.6,
+    "medianSessionMinutes": 5.4,
+    "medianForgesPerSession": 3.6,
+    "maxAbandonRate": 0.08,
+    "hintsPerForge": 0.6,
+    "solveTimeToParRatio": [0.9, 1.3],
+    "minCrashFreeSessions": 0.995
+  },
+
+  "abTests": [
+    { "id": "A1", "lever": "interstitialEveryNForges", "a": 4, "b": 6, "primary": "d7 + rewardedOptIn" },
+    { "id": "A2", "lever": "firstInterstitialForge", "a": 12, "b": 20, "primary": "d1" },
+    { "id": "A3", "lever": "draftsAfterForges", "a": [1,3,5], "b": [2,4,6], "primary": "runLength" },
+    { "id": "A4", "lever": "freeNudgeAfterSeconds", "a": 45, "b": 30, "primary": "abandonRate" },
+    { "id": "A5", "lever": "marksPerRewardedAd", "a": 1, "b": 2, "primary": "rewardedOptIn vs coinInflation" },
+    { "id": "A6", "lever": "hintCostBase", "a": 90, "b": 70, "primary": "coinPressure + adShare" }
+  ]
+}

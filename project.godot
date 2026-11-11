@@ -1,0 +1,57 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="LexiForge"
+config/description="A word-forging puzzle game. Build words, keep your Flow, draft runes, cool the Heat."
+config/version="0.1.0"
+run/main_scene="res://ui/screens/Boot.tscn"
+config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
+boot_splash/show_image=false
+
+[autoload]
+
+EventBus="*res://autoload/EventBus.cs"
+ConfigService="*res://autoload/ConfigService.cs"
+SaveService="*res://autoload/SaveService.cs"
+AnalyticsService="*res://autoload/AnalyticsService.cs"
+EconomyService="*res://autoload/EconomyService.cs"
+GameDataService="*res://autoload/GameDataService.cs"
+AndroidAdService="*res://ads/AndroidAdService.cs"
+AdManager="*res://autoload/AdManager.cs"
+RunService="*res://autoload/RunService.cs"
+ProgressionService="*res://autoload/ProgressionService.cs"
+SceneRouter="*res://autoload/SceneRouter.cs"
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/resizable=false
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[dotnet]
+
+project/assembly_name="LexiForge"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+2d/snap/snap_2d_transforms_to_pixel=true

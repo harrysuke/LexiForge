@@ -1,0 +1,39 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!--
+    TargetFramework is net8.0 because GodotSharp 4.7.2 ships ONLY lib/net8.0
+    (verified against the published NuGet package). net9/net10 would fail at
+    runtime even if the compiler accepted it. The .NET 10 SDK installed on this
+    machine can still target net8.0 by restoring the net8.0 reference packs.
+
+    core/ and ads/AdTypes.cs are PURE C# (no `using Godot;`). They are linked
+    verbatim into LevelGen, BalanceSim and CoreTests, so the shipped game and
+    the offline tools can never drift. tools/ is deliberately excluded here.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>LexiForge</RootNamespace>
+    <AssemblyName>LexiForge</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);GD0001;GD0002;GD0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="core/**/*.cs" Link="Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="ads/**/*.cs" Link="Ads/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="data/**/*.cs" Link="Data/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="autoload/**/*.cs" Link="Autoload/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="ui/**/*.cs" Link="UI/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Never let a tool's bin/obj output leak into the Godot assembly. -->
+  <ItemGroup>
+    <Compile Remove="tools/**" />
+    <Compile Remove="**/bin/**" />
+    <Compile Remove="**/obj/**" />
+    <Compile Remove=".godot/**" />
+  </ItemGroup>
+</Project>

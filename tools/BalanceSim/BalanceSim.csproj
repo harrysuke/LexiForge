@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>LexiForge.Sim</RootNamespace>
+    <AssemblyName>lexiforge-balancesim</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../core/LevelShape.cs" Link="Core/LevelShape.cs" />
+    <Compile Include="../../ads/AdTypes.cs" Link="Ads/AdTypes.cs" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>LexiForge.Tests</RootNamespace>
+    <AssemblyName>lexiforge-coretests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../LevelGen/WordList.cs" Link="Tools/WordList.cs" />
+    <Compile Include="../../core/*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../ads/AdTypes.cs" Link="Ads/AdTypes.cs" />
+  </ItemGroup>
+</Project>

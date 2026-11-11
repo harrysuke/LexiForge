@@ -1,0 +1,15 @@
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.AssemblyInfoInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.AssemblyInfo.cs
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.csproj.CoreCompileInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.sourcelink.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\bin\Debug\net10.0\lexiforge-coretests.exe
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\bin\Debug\net10.0\lexiforge-coretests.deps.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\bin\Debug\net10.0\lexiforge-coretests.runtimeconfig.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\bin\Debug\net10.0\lexiforge-coretests.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\bin\Debug\net10.0\lexiforge-coretests.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\lexiforge-coretests.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\refint\lexiforge-coretests.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\lexiforge-coretests.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\CoreTests.genruntimeconfig.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\CoreTests\obj\Debug\net10.0\ref\lexiforge-coretests.dll

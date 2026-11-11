@@ -1,0 +1,15 @@
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.AssemblyInfoInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.AssemblyInfo.cs
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.csproj.CoreCompileInputs.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.sourcelink.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\bin\Debug\net10.0\lexiforge-levelgen.exe
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\bin\Debug\net10.0\lexiforge-levelgen.deps.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\bin\Debug\net10.0\lexiforge-levelgen.runtimeconfig.json
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\bin\Debug\net10.0\lexiforge-levelgen.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\bin\Debug\net10.0\lexiforge-levelgen.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\lexiforge-levelgen.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\refint\lexiforge-levelgen.dll
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\lexiforge-levelgen.pdb
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\LevelGen.genruntimeconfig.cache
+C:\Users\jpbuser\Documents\Games\LexiForge\godot\tools\LevelGen\obj\Debug\net10.0\ref\lexiforge-levelgen.dll
