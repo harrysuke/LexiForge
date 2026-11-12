@@ -8,6 +8,7 @@
     "weights": { "perExtraWord": 4.0, "perExtraBankLetter": 5.0, "perExtraAvgLength": 4.5, "rarity": 18.0 },
     "breatherBonus": -8.0,
     "breatherEveryNForge": 5,
+    "breatherOffset": 4,
     "breatherWordPenalty": 1,
     "breatherRarityMultiplier": 0.6,
     "minDI": 5.0,
@@ -96,7 +97,7 @@
 
   "runes": [
     { "id": "ember",   "name": "Ember",   "type": "score",   "rarity": "common",   "coinDeltaPct": 0.08, "diDelta": 0.0,  "effect": "+1 coin per letter in words of length >= 5" },
-    { "id": "echo",    "name": "Echo",    "type": "score",   "rarity": "rare",     "coinDeltaPct": 0.06, "diDelta": 0.0,  "effect": "Repeated-letter words raise Flow cap by 0.1 (max 3.0)" },
+    { "id": "echo",    "name": "Echo",    "type": "score",   "rarity": "rare",     "coinDeltaPct": 0.06, "diDelta": 0.0,  "effect": "+1 coin per letter in words that cross an already-filled slot" },
     { "id": "prism",   "name": "Prism",   "type": "economy", "rarity": "common",   "coinDeltaPct": 0.05, "diDelta": 0.0,  "effect": "Bonus Jar coins x2" },
     { "id": "anvil",   "name": "Anvil",   "type": "utility", "rarity": "common",   "coinDeltaPct": 0.0,  "diDelta": 0.0,  "effect": "+1 free hint per forge" },
     { "id": "gale",    "name": "Gale",    "type": "utility", "rarity": "uncommon", "coinDeltaPct": -0.06,"diDelta": -6.0, "effect": "Letter bank gains 1 wild tile for the run" },

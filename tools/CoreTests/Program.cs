@@ -44,6 +44,7 @@ internal static class Program
         TestRuneDraft(cfg);
         TestSaveData();
         TestForgeSession(cfg);
+        TestEchoRune(cfg);
         TestRunState(cfg);
         TestP0UiContracts(cfg);
         TestGeneratedForges(cfg, dataDir);
@@ -220,9 +221,9 @@ internal static class Program
         Check("build delta clamped to +30%",
             Math.Abs(RuneEffects.From(cfg.Runes, cfg.Draft).CoinDeltaPct - cfg.Draft.MaxBuildCoinDeltaPct) < 0.001,
             RuneEffects.From(cfg.Runes, cfg.Draft).CoinDeltaPct.ToString("F3"));
-        Check("echo raises flow cap to max 3.0",
+        Check("echo pays per echoing letter",
             Math.Abs(RuneEffects.From(cfg.Runes.Where(r => r.Id == "echo"), cfg.Draft)
-                .EffectiveFlowCap(2.5, 99) - 3.0) < 0.001);
+                .EchoCoinsPerLetter - 1.0) < 0.001);
     }
 
     private static void TestSaveData()
@@ -432,6 +433,61 @@ internal static class Program
         Check("struggle reveal is one-off per forge",
             !session.ConsecutiveWrongAttemptsReached &&
             !session.TryGrantStruggleReveal(out _, out _, out _));
+    }
+
+    /// <summary>
+    /// Echo regression cover. The old effect keyed on words with a repeated
+    /// letter, which Chapter I banks can never produce (banks are validated to
+    /// have distinct tiles), and the raised Flow cap was clamped away by
+    /// EconomyModel.LevelCoins anyway — so the rune paid exactly 0 coins even
+    /// when it fired. It now pays per letter of a word that crosses an
+    /// already-filled slot, which every forge is contracted to have.
+    /// </summary>
+    private static void TestEchoRune(BalanceConfig cfg)
+    {
+        // bank "star" -> art / rat / star, with two real grid intersections.
+        var forge = new ForgeData
+        {
+            ForgeId = 1,
+            Theme = "Emberworks",
+            LetterBank = "star",
+            SolutionWords = new List<string> { "art", "rat", "star" },
+            KeystoneWord = "star",
+            Slots = new List<GridSlot>
+            {
+                new() { Word = "star", Row = 0, Column = 0, Direction = "h", IsKeystone = true },
+                new() { Word = "art",  Row = 0, Column = 2, Direction = "v" },
+                new() { Word = "rat",  Row = 2, Column = 0, Direction = "h" }
+            },
+            DifficultyIndex = 6.5,
+            ParTimeSeconds = 21.6,
+            Seed = 1
+        };
+
+        var dict = new WordTrie();
+        foreach (string w in new[] { "art", "rat", "star", "tar", "arts" }) dict.Add(w);
+
+        ForgeOutcome Run(RuneEffects fx)
+        {
+            var s = new ForgeSession(forge, dict, cfg, fx);
+            s.Submit("art");   // first word: nothing filled yet, no echo
+            s.Submit("rat");   // crosses "art" at the shared T
+            s.Submit("star");  // crosses "art" at the shared A
+            return s.Outcome!;
+        }
+
+        var echo = RuneEffects.From(cfg.Runes.Where(r => r.Id == "echo"), cfg.Draft);
+        var withEcho = Run(echo);
+        var without = Run(RuneEffects.None);
+
+        // rat(3) + star(4) echo -> 7 letters.
+        Check("echo counts only letters already on the grid", withEcho.RuneBonusCoins == 7,
+            withEcho.RuneBonusCoins.ToString());
+        Check("echo pays nothing without the rune", without.RuneBonusCoins == 0,
+            without.RuneBonusCoins.ToString());
+        Check("echo is additive on top of base coins",
+            withEcho.RuneBonusCoins == 7 && withEcho.TotalCoins > without.TotalCoins,
+            $"{withEcho.TotalCoins} vs {without.TotalCoins}");
     }
 
     private static ForgeOutcome FastComplete(ForgeData forge, WordTrie dict, BalanceConfig cfg, double parRatio)

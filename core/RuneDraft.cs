@@ -42,7 +42,8 @@ public sealed class RuneEffects
 {
     public double CoinDeltaPct { get; private set; }
     public double DifficultyDelta { get; private set; }
-    public double FlowCapBonusPerRepeatedWord { get; private set; }
+    /// <summary>Echo: coins per letter of a word that crosses an already-filled slot.</summary>
+    public double EchoCoinsPerLetter { get; private set; }
     public double EmberCoinsPerLongLetter { get; private set; }
     public double BonusJarMultiplier { get; private set; } = 1.0;
     public double StarCoinMultiplier { get; private set; } = 1.0;
@@ -68,7 +69,7 @@ public sealed class RuneEffects
             switch (rune.Id)
             {
                 case "ember":  fx.EmberCoinsPerLongLetter = 1.0; break;
-                case "echo":   fx.FlowCapBonusPerRepeatedWord = 0.1; break;
+                case "echo":   fx.EchoCoinsPerLetter = 1.0; break;
                 case "prism":  fx.BonusJarMultiplier = 2.0; break;
                 case "anvil":  fx.ExtraFreeHints += 1; break;
                 case "gale":   fx.WildTiles += 1; break;
@@ -85,9 +86,6 @@ public sealed class RuneEffects
         fx.DifficultyDelta = Math.Max(-12.0, di);
         return fx;
     }
-
-    public double EffectiveFlowCap(double baseCap, int repeatedLetterWords)
-        => Math.Min(3.0, baseCap + FlowCapBonusPerRepeatedWord * Math.Max(0, repeatedLetterWords));
 }
 
 /// <summary>

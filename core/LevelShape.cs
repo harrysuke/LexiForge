@@ -29,6 +29,13 @@ public sealed class DifficultyShapeTuning
     public double RarityBase { get; init; } = 0.02;
     public double RarityScale { get; init; } = 0.28;
     public int BreatherEveryN { get; init; } = 5;
+    /// <summary>
+    /// 1-based position of the breather inside each block of <see cref="BreatherEveryN"/>.
+    /// 5 (the default) means forges 5/10/15/20 — the legacy behaviour where every
+    /// pack of 20 ends on its easiest level. 4 puts relief at 4/9/14/19 and frees
+    /// forge 20/40/60 to be a capstone.
+    /// </summary>
+    public int BreatherOffset { get; init; } = 5;
     public int BreatherWordPenalty { get; init; } = 1;
     public double BreatherRarityMultiplier { get; init; } = 0.6;
 }
@@ -54,6 +61,18 @@ public sealed class ParTimeTuning
 
 public static class DifficultyModel
 {
+    /// <summary>
+    /// Single source of truth for "is this forge a relief level?". Used by the
+    /// shape curve AND by the validator, so the two can never disagree about
+    /// which forges carry the -8 breather bonus.
+    /// </summary>
+    public static bool IsBreather(int forgeIndex, DifficultyShapeTuning t)
+    {
+        int n = Math.Max(1, t.BreatherEveryN);
+        int offset = Math.Clamp(t.BreatherOffset, 1, n);
+        return (Math.Max(1, forgeIndex) - 1) % n == offset - 1;
+    }
+
     /// <summary>Deterministic content shape for a 1-based forge index.</summary>
     public static LevelShape ShapeFor(int forgeIndex, DifficultyShapeTuning t)
     {
@@ -65,7 +84,7 @@ public static class DifficultyModel
         double avgLen = t.AvgLenBase + t.AvgLenScale * progress;
         double rarity = t.RarityBase + t.RarityScale * progress;
 
-        bool breather = forgeIndex % Math.Max(1, t.BreatherEveryN) == 0;
+        bool breather = IsBreather(forgeIndex, t);
         if (breather)
         {
             words = Math.Max(3, words - t.BreatherWordPenalty);

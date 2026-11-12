@@ -80,7 +80,7 @@ public sealed class ForgeSession
     private readonly string _bankWithWilds;
 
     private int _cleanStreak;
-    private int _repeatedLetterWords;
+    private int _echoLetters;
     private int _emberLongLetters;
     private bool _hintSinceLastFind;
     private int _coolStrikes;
@@ -165,17 +165,22 @@ public sealed class ForgeSession
                 return new WordSubmission(WordSubmissionKind.KeystoneLocked, word, Flow, _bonusJar.Count, _found.Count,
                                           SlotIndexFor(word), false);
 
+            // Echo is evaluated BEFORE the word joins _found, so it only counts
+            // letters that were already on the grid. Content-independent: every
+            // forge has >= 2 grid intersections, so Echo can always fire.
+            bool echoes = EchoesFilledSlot(word);
+
             _found.Add(word);
             _cleanStreak++;
             _lastCorrectAt = ElapsedSeconds;
-            double cap = _effects.EffectiveFlowCap(Math.Max(1.0, _economy.FlowCap), _repeatedLetterWords);
+            double cap = Math.Max(1.0, _economy.FlowCap);
             Flow = 1.0 + Math.Min(cap - 1.0, Math.Max(0, _cleanStreak) * _economy.FlowStep);
             FlowPeak = Math.Max(FlowPeak, Flow);
             if (!_hintSinceLastFind) _coolStrikes++;
             _hintSinceLastFind = false;
 
             if (!_anyFind) { _anyFind = true; _firstWordFlow = Flow; }
-            if (HasRepeatedLetter(word)) _repeatedLetterWords++;
+            if (echoes) _echoLetters += word.Length;
             if (word.Length >= 5) _emberLongLetters += word.Length;
 
             bool complete = _found.Count == _solutions.Count;
@@ -200,6 +205,35 @@ public sealed class ForgeSession
         _cleanStreak = 0;
         Flow = 1.0;
         return new WordSubmission(kind, word, Flow, _bonusJar.Count, _found.Count, -1, false);
+    }
+
+    /// <summary>
+    /// True when this word shares at least one grid cell with an already-filled
+    /// slot. That is what "echo" means: a letter coming back across the grid.
+    ///
+    /// Deliberately NOT keyed on repeated letters inside the word. Banks are
+    /// validated to have distinct tiles, so a repeated-letter word can never be
+    /// built in Chapter I — the old rule made the rune unreachable for the whole
+    /// first hour. Intersections are guaranteed by the content contract (>= 2),
+    /// so this trigger is always available, in every pack, forever.
+    /// </summary>
+    private bool EchoesFilledSlot(string word)
+    {
+        if (_found.Count == 0) return false;
+        int slotIndex = SlotIndexFor(word);
+        if (slotIndex < 0) return false;
+
+        foreach (var cell in _forge.Slots[slotIndex].Cells())
+        {
+            foreach (var other in _forge.Slots)
+            {
+                if (string.Equals(other.Word, word, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!_found.Contains(other.Word.ToLowerInvariant())) continue;
+                foreach (var otherCell in other.Cells())
+                    if (otherCell.Row == cell.Row && otherCell.Column == cell.Column) return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------- hints
@@ -349,8 +383,9 @@ public sealed class ForgeSession
         double prismExtra = bonusWords * _economy.PerBonusWord * flow
                             * (_effects.BonusJarMultiplier - 1.0) * (1.0 + _effects.CoinDeltaPct);
         double emberExtra = _emberLongLetters * _effects.EmberCoinsPerLongLetter;
+        double echoExtra = _echoLetters * _effects.EchoCoinsPerLetter;
         double sparkExtra = (_effects.FirstWordCoinMultiplier - 1.0) * _economy.PerSolutionWord * _firstWordFlow;
-        int runeBonus = (int)Math.Round(prismExtra + emberExtra + sparkExtra);
+        int runeBonus = (int)Math.Round(prismExtra + emberExtra + echoExtra + sparkExtra);
 
         int starCoins = (int)Math.Round(EconomyModel.StarBonus(stars, _economy) * _effects.StarCoinMultiplier);
         int total = baseCoins + runeBonus + starCoins;

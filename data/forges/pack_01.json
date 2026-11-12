@@ -9,391 +9,101 @@
     {
       "forgeId": 1,
       "theme": "Emberworks",
-      "letterBank": "spark",
-      "solutionWords": [
-        "spa",
-        "par",
-        "arks"
-      ],
-      "keystoneWord": "arks",
-      "slots": [
-        {
-          "word": "arks",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "par",
-          "row": 0,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "spa",
-          "row": 1,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 11.5,
-      "parTimeSeconds": 27.754,
-      "seed": 7919,
-      "checksum": "25519e4233d1e8d5"
-    },
-    {
-      "forgeId": 2,
-      "theme": "Emberworks",
       "letterBank": "star",
       "solutionWords": [
+        "art",
         "rat",
-        "sat",
-        "tsar"
+        "star"
       ],
-      "keystoneWord": "tsar",
+      "keystoneWord": "star",
       "slots": [
         {
-          "word": "tsar",
-          "row": 2,
-          "column": 1,
+          "word": "star",
+          "row": 0,
+          "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "sat",
+          "word": "art",
           "row": 0,
-          "column": 1,
+          "column": 2,
           "direction": "v",
           "isKeystone": false
         },
         {
           "word": "rat",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 12.5,
-      "parTimeSeconds": 29.0,
-      "seed": 15836,
-      "checksum": "6c1e56b79a4381ac"
-    },
-    {
-      "forgeId": 3,
-      "theme": "Emberworks",
-      "letterBank": "stone",
-      "solutionWords": [
-        "not",
-        "net",
-        "toes"
-      ],
-      "keystoneWord": "toes",
-      "slots": [
-        {
-          "word": "toes",
           "row": 2,
           "column": 0,
           "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "net",
-          "row": 0,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "not",
-          "row": 0,
-          "column": 0,
-          "direction": "h",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 11.5,
-      "parTimeSeconds": 27.754,
-      "seed": 23757,
-      "checksum": "b801def41e139555"
+      "difficultyIndex": 6.5,
+      "parTimeSeconds": 21.644,
+      "seed": 7919,
+      "checksum": "0b5ac7508e402f45"
     },
     {
-      "forgeId": 4,
-      "theme": "Emberworks",
-      "letterBank": "anvil",
-      "solutionWords": [
-        "via",
-        "ail",
-        "vial"
-      ],
-      "keystoneWord": "vial",
-      "slots": [
-        {
-          "word": "vial",
-          "row": 0,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "ail",
-          "row": 0,
-          "column": 2,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "via",
-          "row": 0,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 17.5,
-      "parTimeSeconds": 35.35,
-      "seed": 31676,
-      "checksum": "6024530fa1dff557"
-    },
-    {
-      "forgeId": 5,
-      "theme": "Observatory",
-      "letterBank": "race",
-      "solutionWords": [
-        "arc",
-        "car",
-        "race"
-      ],
-      "keystoneWord": "race",
-      "slots": [
-        {
-          "word": "race",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "car",
-          "row": 1,
-          "column": 2,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "arc",
-          "row": 0,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 5.0,
-      "parTimeSeconds": 19.85,
-      "seed": 39595,
-      "checksum": "eac032435ed7d472"
-    },
-    {
-      "forgeId": 6,
-      "theme": "Emberworks",
-      "letterBank": "flame",
-      "solutionWords": [
-        "meal",
-        "elm",
-        "flame"
-      ],
-      "keystoneWord": "flame",
-      "slots": [
-        {
-          "word": "flame",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "meal",
-          "row": 1,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "elm",
-          "row": 0,
-          "column": 1,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 14.5,
-      "parTimeSeconds": 31.516,
-      "seed": 47514,
-      "checksum": "9c15110ca23f6043"
-    },
-    {
-      "forgeId": 7,
+      "forgeId": 2,
       "theme": "Emberworks",
       "letterBank": "team",
       "solutionWords": [
-        "tea",
+        "eat",
         "mat",
-        "met",
-        "mate"
-      ],
-      "keystoneWord": "mate",
-      "slots": [
-        {
-          "word": "mate",
-          "row": 2,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "met",
-          "row": 0,
-          "column": 2,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "tea",
-          "row": 1,
-          "column": 1,
-          "direction": "h",
-          "isKeystone": false
-        },
-        {
-          "word": "mat",
-          "row": 0,
-          "column": 2,
-          "direction": "h",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 55433,
-      "checksum": "7db59fdb4fbc93b6"
-    },
-    {
-      "forgeId": 8,
-      "theme": "Herbarium",
-      "letterBank": "plant",
-      "solutionWords": [
-        "lap",
-        "nap",
-        "pat",
-        "plant"
-      ],
-      "keystoneWord": "plant",
-      "slots": [
-        {
-          "word": "plant",
-          "row": 0,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "pat",
-          "row": 0,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "lap",
-          "row": 0,
-          "column": 1,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "nap",
-          "row": 0,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 16.25,
-      "parTimeSeconds": 33.74375,
-      "seed": 63353,
-      "checksum": "235203180964a5b7"
-    },
-    {
-      "forgeId": 9,
-      "theme": "Emberworks",
-      "letterBank": "team",
-      "solutionWords": [
-        "mat",
-        "tam",
-        "met",
         "meat"
       ],
       "keystoneWord": "meat",
       "slots": [
         {
           "word": "meat",
-          "row": 2,
+          "row": 0,
           "column": 1,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "tam",
+          "word": "eat",
           "row": 0,
-          "column": 1,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "met",
-          "row": 0,
-          "column": 4,
+          "column": 2,
           "direction": "v",
           "isKeystone": false
         },
         {
           "word": "mat",
-          "row": 1,
+          "row": 2,
           "column": 0,
           "direction": "h",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 71269,
-      "checksum": "f5f11c507ca7e2b2"
+      "difficultyIndex": 6.5,
+      "parTimeSeconds": 21.644,
+      "seed": 15838,
+      "checksum": "d7e5991b7fc9c9b5"
     },
     {
-      "forgeId": 10,
-      "theme": "Bakery",
-      "letterBank": "crate",
+      "forgeId": 3,
+      "theme": "Emberworks",
+      "letterBank": "race",
       "solutionWords": [
+        "arc",
         "era",
-        "ace",
-        "acre"
+        "care"
       ],
-      "keystoneWord": "acre",
+      "keystoneWord": "care",
       "slots": [
         {
-          "word": "acre",
+          "word": "care",
           "row": 0,
           "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "ace",
+          "word": "arc",
           "row": 0,
-          "column": 0,
+          "column": 1,
           "direction": "v",
           "isKeystone": false
         },
@@ -405,157 +115,56 @@
           "isKeystone": false
         }
       ],
+      "difficultyIndex": 6.5,
+      "parTimeSeconds": 21.644,
+      "seed": 23757,
+      "checksum": "d6d370a4ecfa4c91"
+    },
+    {
+      "forgeId": 4,
+      "theme": "Emberworks",
+      "letterBank": "lamp",
+      "solutionWords": [
+        "map",
+        "lap",
+        "palm"
+      ],
+      "keystoneWord": "palm",
+      "slots": [
+        {
+          "word": "palm",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "map",
+          "row": 0,
+          "column": 3,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "lap",
+          "row": 2,
+          "column": 1,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
       "difficultyIndex": 5.0,
       "parTimeSeconds": 19.85,
-      "seed": 79190,
-      "checksum": "4422268203191918"
+      "seed": 31676,
+      "checksum": "a602972378770f2d"
     },
     {
-      "forgeId": 11,
+      "forgeId": 5,
       "theme": "Emberworks",
-      "letterBank": "team",
-      "solutionWords": [
-        "tam",
-        "tea",
-        "eat",
-        "team"
-      ],
-      "keystoneWord": "team",
-      "slots": [
-        {
-          "word": "team",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "tea",
-          "row": 0,
-          "column": 1,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "tam",
-          "row": 0,
-          "column": 1,
-          "direction": "h",
-          "isKeystone": false
-        },
-        {
-          "word": "eat",
-          "row": 2,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 87105,
-      "checksum": "c681796c0aa5c743"
-    },
-    {
-      "forgeId": 12,
-      "theme": "Bakery",
-      "letterBank": "crate",
-      "solutionWords": [
-        "eat",
-        "cat",
-        "ate",
-        "cater"
-      ],
-      "keystoneWord": "cater",
-      "slots": [
-        {
-          "word": "cater",
-          "row": 1,
-          "column": 1,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "cat",
-          "row": 0,
-          "column": 2,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "eat",
-          "row": 2,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": false
-        },
-        {
-          "word": "ate",
-          "row": 0,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 16.25,
-      "parTimeSeconds": 33.74375,
-      "seed": 95030,
-      "checksum": "6d4cc0fcf1e6a896"
-    },
-    {
-      "forgeId": 13,
-      "theme": "Emberworks",
-      "letterBank": "team",
-      "solutionWords": [
-        "mat",
-        "eat",
-        "met",
-        "mate"
-      ],
-      "keystoneWord": "mate",
-      "slots": [
-        {
-          "word": "mate",
-          "row": 2,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "mat",
-          "row": 0,
-          "column": 2,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "met",
-          "row": 0,
-          "column": 2,
-          "direction": "h",
-          "isKeystone": false
-        },
-        {
-          "word": "eat",
-          "row": 2,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 102949,
-      "checksum": "5fc48efc93d03700"
-    },
-    {
-      "forgeId": 14,
-      "theme": "Tidepool",
       "letterBank": "note",
       "solutionWords": [
+        "one",
         "toe",
-        "net",
-        "eon",
         "tone"
       ],
       "keystoneWord": "tone",
@@ -568,124 +177,108 @@
           "isKeystone": true
         },
         {
-          "word": "eon",
+          "word": "one",
           "row": 0,
-          "column": 4,
+          "column": 2,
           "direction": "v",
           "isKeystone": false
         },
         {
           "word": "toe",
-          "row": 0,
-          "column": 1,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "net",
           "row": 2,
           "column": 0,
           "direction": "h",
-          "isKeystone": false
-        }
-      ],
-      "difficultyIndex": 14.625,
-      "parTimeSeconds": 31.6743125,
-      "seed": 110866,
-      "checksum": "db05b2e73723c8d1"
-    },
-    {
-      "forgeId": 15,
-      "theme": "Herbarium",
-      "letterBank": "plant",
-      "solutionWords": [
-        "pant",
-        "apt",
-        "plant"
-      ],
-      "keystoneWord": "plant",
-      "slots": [
-        {
-          "word": "plant",
-          "row": 2,
-          "column": 0,
-          "direction": "h",
-          "isKeystone": true
-        },
-        {
-          "word": "apt",
-          "row": 0,
-          "column": 4,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "pant",
-          "row": 2,
-          "column": 0,
-          "direction": "v",
           "isKeystone": false
         }
       ],
       "difficultyIndex": 6.5,
       "parTimeSeconds": 21.644,
-      "seed": 118785,
-      "checksum": "c73e10fe1b4c87a2"
+      "seed": 39595,
+      "checksum": "d8c7f0159ea1bb85"
     },
     {
-      "forgeId": 16,
+      "forgeId": 6,
       "theme": "Emberworks",
-      "letterBank": "team",
+      "letterBank": "spark",
       "solutionWords": [
-        "mat",
-        "ate",
-        "tea",
-        "team"
+        "ark",
+        "spa",
+        "park"
       ],
-      "keystoneWord": "team",
+      "keystoneWord": "park",
       "slots": [
         {
-          "word": "team",
-          "row": 2,
+          "word": "park",
+          "row": 1,
           "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "mat",
-          "row": 2,
-          "column": 3,
+          "word": "ark",
+          "row": 0,
+          "column": 2,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "ate",
+          "word": "spa",
+          "row": 0,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 11.5,
+      "parTimeSeconds": 27.754,
+      "seed": 47514,
+      "checksum": "705bfc0df55c76c2"
+    },
+    {
+      "forgeId": 7,
+      "theme": "Emberworks",
+      "letterBank": "flame",
+      "solutionWords": [
+        "ale",
+        "elf",
+        "fame"
+      ],
+      "keystoneWord": "fame",
+      "slots": [
+        {
+          "word": "fame",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "ale",
           "row": 0,
           "column": 1,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "tea",
-          "row": 3,
+          "word": "elf",
+          "row": 2,
           "column": 1,
           "direction": "h",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 126705,
-      "checksum": "247f9094f8b50616"
+      "difficultyIndex": 11.5,
+      "parTimeSeconds": 27.754,
+      "seed": 55433,
+      "checksum": "f768d8bbcd097c90"
     },
     {
-      "forgeId": 17,
-      "theme": "Bakery",
+      "forgeId": 8,
+      "theme": "Emberworks",
       "letterBank": "baker",
       "solutionWords": [
-        "era",
-        "are",
         "ark",
+        "ear",
         "bake"
       ],
       "keystoneWord": "bake",
@@ -698,113 +291,136 @@
           "isKeystone": true
         },
         {
-          "word": "are",
+          "word": "ark",
           "row": 0,
           "column": 1,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "era",
-          "row": 2,
-          "column": 1,
-          "direction": "h",
-          "isKeystone": false
-        },
-        {
-          "word": "ark",
-          "row": 1,
-          "column": 0,
-          "direction": "h",
+          "word": "ear",
+          "row": 0,
+          "column": 3,
+          "direction": "v",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 15.125,
-      "parTimeSeconds": 32.3088125,
-      "seed": 134622,
-      "checksum": "d7728e1d9a84a261"
+      "difficultyIndex": 11.5,
+      "parTimeSeconds": 27.754,
+      "seed": 63352,
+      "checksum": "1b1a5c32eff0fdaa"
     },
     {
-      "forgeId": 18,
+      "forgeId": 9,
       "theme": "Emberworks",
-      "letterBank": "team",
+      "letterBank": "plant",
       "solutionWords": [
-        "ate",
-        "mat",
-        "eat",
-        "mate"
+        "ant",
+        "lap",
+        "plan"
       ],
-      "keystoneWord": "mate",
+      "keystoneWord": "plan",
       "slots": [
         {
-          "word": "mate",
-          "row": 2,
+          "word": "plan",
+          "row": 1,
           "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "mat",
-          "row": 2,
-          "column": 0,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "ate",
+          "word": "ant",
           "row": 0,
           "column": 3,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "eat",
-          "row": 0,
-          "column": 2,
+          "word": "lap",
+          "row": 1,
+          "column": 1,
           "direction": "v",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 10.125,
-      "parTimeSeconds": 26.0538125,
-      "seed": 142541,
-      "checksum": "7123031eea3b7661"
+      "difficultyIndex": 5.0,
+      "parTimeSeconds": 19.85,
+      "seed": 71271,
+      "checksum": "f8eea98ca0437bc0"
     },
     {
-      "forgeId": 19,
-      "theme": "Bakery",
+      "forgeId": 10,
+      "theme": "Emberworks",
       "letterBank": "crate",
       "solutionWords": [
-        "tar",
-        "care",
-        "are",
+        "cat",
+        "tea",
         "cater"
       ],
       "keystoneWord": "cater",
       "slots": [
         {
           "word": "cater",
-          "row": 2,
+          "row": 0,
           "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "tar",
+          "word": "cat",
+          "row": 0,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "tea",
           "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 13.0,
+      "parTimeSeconds": 29.626,
+      "seed": 79190,
+      "checksum": "beb17b1e91f4b80f"
+    },
+    {
+      "forgeId": 11,
+      "theme": "Emberworks",
+      "letterBank": "coral",
+      "solutionWords": [
+        "arc",
+        "oar",
+        "coal",
+        "carol"
+      ],
+      "keystoneWord": "carol",
+      "slots": [
+        {
+          "word": "carol",
+          "row": 3,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "arc",
+          "row": 1,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "oar",
+          "row": 1,
           "column": 2,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "are",
-          "row": 0,
-          "column": 3,
-          "direction": "v",
-          "isKeystone": false
-        },
-        {
-          "word": "care",
+          "word": "coal",
           "row": 0,
           "column": 4,
           "direction": "v",
@@ -812,47 +428,423 @@
         }
       ],
       "difficultyIndex": 17.375,
-      "parTimeSeconds": 35.1888125,
-      "seed": 150460,
-      "checksum": "355d3c9ede78bba3"
+      "parTimeSeconds": 35.189,
+      "seed": 87109,
+      "checksum": "7f827eee7b92093b"
     },
     {
-      "forgeId": 20,
+      "forgeId": 12,
       "theme": "Emberworks",
-      "letterBank": "anvil",
+      "letterBank": "orbit",
       "solutionWords": [
-        "nil",
-        "ail",
-        "vial"
+        "bit",
+        "rot",
+        "orb",
+        "trio"
       ],
-      "keystoneWord": "vial",
+      "keystoneWord": "trio",
       "slots": [
         {
-          "word": "vial",
-          "row": 1,
+          "word": "trio",
+          "row": 0,
+          "column": 1,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "rot",
+          "row": 0,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "bit",
+          "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        },
+        {
+          "word": "orb",
+          "row": 0,
+          "column": 4,
+          "direction": "v",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 15.125,
+      "parTimeSeconds": 32.309,
+      "seed": 95028,
+      "checksum": "b65475c70057c264"
+    },
+    {
+      "forgeId": 13,
+      "theme": "Emberworks",
+      "letterBank": "tidal",
+      "solutionWords": [
+        "aid",
+        "lad",
+        "lit",
+        "dial"
+      ],
+      "keystoneWord": "dial",
+      "slots": [
+        {
+          "word": "dial",
+          "row": 0,
           "column": 0,
           "direction": "h",
           "isKeystone": true
         },
         {
-          "word": "nil",
+          "word": "aid",
+          "row": 0,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "lad",
+          "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        },
+        {
+          "word": "lit",
+          "row": 2,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 15.125,
+      "parTimeSeconds": 32.309,
+      "seed": 102947,
+      "checksum": "2cb573562351af48"
+    },
+    {
+      "forgeId": 14,
+      "theme": "Emberworks",
+      "letterBank": "maple",
+      "solutionWords": [
+        "ape",
+        "elm",
+        "pal",
+        "ample"
+      ],
+      "keystoneWord": "ample",
+      "slots": [
+        {
+          "word": "ample",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "ape",
+          "row": 0,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "elm",
+          "row": 0,
+          "column": 4,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "pal",
+          "row": 0,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 8.25,
+      "parTimeSeconds": 23.76,
+      "seed": 110866,
+      "checksum": "062e86f777fc7106"
+    },
+    {
+      "forgeId": 15,
+      "theme": "Emberworks",
+      "letterBank": "shore",
+      "solutionWords": [
+        "her",
+        "ore",
+        "rose",
+        "horse"
+      ],
+      "keystoneWord": "horse",
+      "slots": [
+        {
+          "word": "horse",
+          "row": 0,
+          "column": 2,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "her",
+          "row": 0,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "ore",
+          "row": 1,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        },
+        {
+          "word": "rose",
+          "row": 2,
+          "column": 2,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 17.375,
+      "parTimeSeconds": 35.189,
+      "seed": 118785,
+      "checksum": "40cc46f3bd2315cb"
+    },
+    {
+      "forgeId": 16,
+      "theme": "Emberworks",
+      "letterBank": "coast",
+      "solutionWords": [
+        "cat",
+        "oat",
+        "coat",
+        "tacos"
+      ],
+      "keystoneWord": "tacos",
+      "slots": [
+        {
+          "word": "tacos",
+          "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "cat",
+          "row": 0,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "oat",
+          "row": 2,
+          "column": 3,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "coat",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 17.375,
+      "parTimeSeconds": 35.189,
+      "seed": 126704,
+      "checksum": "90d86a73c8833978"
+    },
+    {
+      "forgeId": 17,
+      "theme": "Emberworks",
+      "letterBank": "trail",
+      "solutionWords": [
+        "air",
+        "lit",
+        "rail",
+        "trial"
+      ],
+      "keystoneWord": "trial",
+      "slots": [
+        {
+          "word": "trial",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "lit",
+          "row": 0,
+          "column": 4,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "rail",
           "row": 0,
           "column": 1,
           "direction": "v",
           "isKeystone": false
         },
         {
-          "word": "ail",
-          "row": 1,
+          "word": "air",
+          "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 17.375,
+      "parTimeSeconds": 35.189,
+      "seed": 134623,
+      "checksum": "638192f4035a434f"
+    },
+    {
+      "forgeId": 18,
+      "theme": "Emberworks",
+      "letterBank": "bread",
+      "solutionWords": [
+        "bad",
+        "ear",
+        "read",
+        "beard"
+      ],
+      "keystoneWord": "beard",
+      "slots": [
+        {
+          "word": "beard",
+          "row": 0,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "bad",
+          "row": 0,
+          "column": 0,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "read",
+          "row": 0,
+          "column": 3,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "ear",
+          "row": 2,
           "column": 2,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 17.375,
+      "parTimeSeconds": 35.189,
+      "seed": 142542,
+      "checksum": "ef321329f64cf845"
+    },
+    {
+      "forgeId": 19,
+      "theme": "Emberworks",
+      "letterBank": "forge",
+      "solutionWords": [
+        "fog",
+        "ore",
+        "roe",
+        "frog"
+      ],
+      "keystoneWord": "frog",
+      "slots": [
+        {
+          "word": "frog",
+          "row": 2,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "fog",
+          "row": 0,
+          "column": 3,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "ore",
+          "row": 2,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "roe",
+          "row": 4,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": false
+        }
+      ],
+      "difficultyIndex": 7.125,
+      "parTimeSeconds": 22.397,
+      "seed": 150461,
+      "checksum": "82354a2ca6df4499"
+    },
+    {
+      "forgeId": 20,
+      "theme": "Emberworks",
+      "letterBank": "north",
+      "solutionWords": [
+        "hot",
+        "nor",
+        "ton",
+        "thorn"
+      ],
+      "keystoneWord": "thorn",
+      "slots": [
+        {
+          "word": "thorn",
+          "row": 1,
+          "column": 0,
+          "direction": "h",
+          "isKeystone": true
+        },
+        {
+          "word": "hot",
+          "row": 0,
+          "column": 2,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "nor",
+          "row": 1,
+          "column": 4,
+          "direction": "v",
+          "isKeystone": false
+        },
+        {
+          "word": "ton",
+          "row": 1,
+          "column": 0,
           "direction": "v",
           "isKeystone": false
         }
       ],
-      "difficultyIndex": 9.5,
-      "parTimeSeconds": 25.286,
+      "difficultyIndex": 16.25,
+      "parTimeSeconds": 33.744,
       "seed": 158380,
-      "checksum": "6ac09ded5b9f4ed1"
+      "checksum": "33ff910630b67445"
     }
   ]
 }

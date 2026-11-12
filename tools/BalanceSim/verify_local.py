@@ -39,7 +39,8 @@ class Model:
                           bb=s["bankSize"]["base"], bs=s["bankSize"]["scale"], be=s["bankSize"]["exponent"],
                           ab=s["avgWordLength"]["base"], as_=s["avgWordLength"]["scale"],
                           rb=s["rarity"]["base"], rs=s["rarity"]["scale"],
-                          bn=d["breatherEveryNForge"], bp=d["breatherWordPenalty"], bm=d["breatherRarityMultiplier"])
+                          bn=d["breatherEveryNForge"], bo=d.get("breatherOffset", 5),
+                          bp=d["breatherWordPenalty"], bm=d["breatherRarityMultiplier"])
         self.w = dict(pw=w["perExtraWord"], pb=w["perExtraBankLetter"], pa=w["perExtraAvgLength"],
                       rr=w["rarity"], bonus=d["breatherBonus"], lo=d["minDI"], hi=d["maxDI"])
         self.par = dict(b=p["base"], l=p["linear"], q=p["quadratic"], cap=p["capSeconds"])
@@ -73,7 +74,7 @@ class Model:
         bank = int(round(s["bb"] + s["bs"] * t ** s["be"]))
         avg = s["ab"] + s["as_"] * t
         rarity = s["rb"] + s["rs"] * t
-        breather = idx % s["bn"] == 0
+        breather = (idx - 1) % s["bn"] == min(max(s["bo"], 1), s["bn"]) - 1
         if breather:
             words = max(3, words - s["bp"])
             rarity *= s["bm"]

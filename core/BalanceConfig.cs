@@ -162,6 +162,7 @@ public sealed class BalanceConfig
             RarityBase = D(Required(shape, "rarity"), "base", 0.02),
             RarityScale = D(Required(shape, "rarity"), "scale", 0.28),
             BreatherEveryN = I(diff, "breatherEveryNForge", 5),
+            BreatherOffset = I(diff, "breatherOffset", 5),
             BreatherWordPenalty = I(diff, "breatherWordPenalty", 1),
             BreatherRarityMultiplier = D(diff, "breatherRarityMultiplier", 0.6)
         };

@@ -105,6 +105,7 @@ internal static class Program
                 RarityBase = D(shape.GetProperty("rarity"), "base", 0.02),
                 RarityScale = D(shape.GetProperty("rarity"), "scale", 0.28),
                 BreatherEveryN = I(diff, "breatherEveryNForge", 5),
+                BreatherOffset = I(diff, "breatherOffset", 5),
                 BreatherWordPenalty = I(diff, "breatherWordPenalty", 1),
                 BreatherRarityMultiplier = D(diff, "breatherRarityMultiplier", 0.6)
             },

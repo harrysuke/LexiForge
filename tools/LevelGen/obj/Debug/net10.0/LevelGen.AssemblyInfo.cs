@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("lexiforge-levelgen")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d8b506ab681cf08269603f43803473b64aaefa0c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7b4f2d70157e7a51a20f24577d296d68f25debdc")]
 [assembly: System.Reflection.AssemblyProductAttribute("lexiforge-levelgen")]
 [assembly: System.Reflection.AssemblyTitleAttribute("lexiforge-levelgen")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

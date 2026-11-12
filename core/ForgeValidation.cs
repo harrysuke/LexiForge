@@ -93,7 +93,7 @@ public static class ForgeValidator
             errors.Add("keystone flag is on the wrong slot");
 
         // --- difficulty ---
-        bool breather = forge.ForgeId % Math.Max(1, cfg.Shape.BreatherEveryN) == 0;
+        bool breather = DifficultyModel.IsBreather(forge.ForgeId, cfg.Shape);
         double computedDI = DifficultyFromContent(forge, cfg.Weights, commonWords, breather);
         if (Math.Abs(computedDI - forge.DifficultyIndex) > 0.02)
             errors.Add($"DI {forge.DifficultyIndex:F2} != content DI {computedDI:F2}");
