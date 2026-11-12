@@ -3,7 +3,7 @@
 [![License: AGPL v3](https://shields.io)](https://gnu.org)
 [![Engine: Godot](https://shields.io)](https://godotengine.org)
 
-**LexiForge** is a [genre, e.g., word-building / puzzle] game built with the **Godot Engine** and **C# (.NET)**.
+**LexiForge** is a word game built with the **Godot Engine** and **C# (.NET)**.
 
 ## Features
 
