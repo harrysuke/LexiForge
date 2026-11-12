@@ -6,25 +6,6 @@
 
 **LexiForge** is a cross-platform word puzzle game built with Godot 4 (.NET) and C#, featuring a modular folder layout for core logic, UI, audio, and data.
 
-
-## Project Structure
-
-```text
-LexiForge/
-├── _shots/               # Promotional screenshots and visual captures
-├── ads/                  # Ad integration and monetization scripts/scenes
-├── audio/                # Sound effects (SFX), background music, and audio controllers
-├── autoload/             # Global singletons (state management, save data, audio bus)
-├── core/                 # Core gameplay logic, word validation, and rulesets
-├── data/                 # Dictionaries, word lists, level definitions, and static configs
-├── tools/                # Editor utilities and build/data helper scripts
-├── ui/                   # Menus, HUD, themes, and interface components
-├── LexiForge.csproj      # .NET / C# project configuration
-├── export_presets.cfg    # Godot platform export configurations
-├── project.godot         # Main Godot engine project file
-└── LICENSE.txt           # GNU Affero General Public License v3.0
-```
-
 ## Prerequisites
 
 - **[Godot Engine (.NET version)](https://godotengine.orgdownload/)** (v4.x recommended)
@@ -53,6 +34,24 @@ Export configurations are defined in `export_presets.cfg`. To build a release bi
 1. Open **Project > Export...** in the Godot Editor.
 2. Select your target preset (e.g., Android, Windows, Web).
 3. Ensure your export templates and SDK paths are configured in **Editor > Editor Settings**, then click **Export Project**.
+
+## Project Structure
+
+```text
+LexiForge/
+├── _shots/               # Promotional screenshots and visual captures
+├── ads/                  # Ad integration and monetization scripts/scenes
+├── audio/                # Sound effects (SFX), background music, and audio controllers
+├── autoload/             # Global singletons (state management, save data, audio bus)
+├── core/                 # Core gameplay logic, word validation, and rulesets
+├── data/                 # Dictionaries, word lists, level definitions, and static configs
+├── tools/                # Editor utilities and build/data helper scripts
+├── ui/                   # Menus, HUD, themes, and interface components
+├── LexiForge.csproj      # .NET / C# project configuration
+├── export_presets.cfg    # Godot platform export configurations
+├── project.godot         # Main Godot engine project file
+└── LICENSE.txt           # GNU Affero General Public License v3.0
+```
 
 ## License
 
