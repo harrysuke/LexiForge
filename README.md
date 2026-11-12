@@ -6,18 +6,6 @@
 
 **LexiForge** is a cross-platform word puzzle game built with Godot 4 (.NET) and C#, featuring a modular folder layout for core logic, UI, audio, and data.
 
----
-
-## Quick Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com
-   cd LexiForge
-   ```
-2. **Open in Godot:** Import `project.godot` using Godot 4 (.NET).
-3. **Build and Run:** Restore/build `LexiForge.csproj` and run the project via the editor.
-
 
 ## Project Structure
 
