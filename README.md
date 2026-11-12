@@ -1,17 +1,23 @@
 # LexiForge
 
 [![License: AGPL v3](https://shields.io)](https://gnu.org)
-[![Engine: Godot](https://shields.io)](https://godotengine.org)
+[![Engine: Godot 4 (.NET)](https://shields.io)](https://godotengine.org)
+[![Language: C#](https://shields.io)](https://microsoft.com)
 
-**LexiForge** is a word game built with the **Godot Engine** and **C# (.NET)**.
+**LexiForge** is a cross-platform word puzzle game built with Godot 4 (.NET) and C#, featuring a modular folder layout for core logic, UI, audio, and data.
 
-## Features
+---
 
-- **[Core Gameplay Feature 1]:** [Describe the main word or puzzle mechanics, e.g., Forge words from letter tiles to progress through handcrafted levels.]
-- **[Core Gameplay Feature 2]:** [Describe progression, scoring, or game modes.]
-- **Modular Architecture:** Separated into clean core logic, UI, audio, and global autoload managers.
-- **Monetization Ready:** Integrated ad management system located in `ads/`.
-- **Cross-Platform Export:** Pre-configured export presets for [e.g., Android / Desktop / Web].
+## Quick Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com
+   cd LexiForge
+   ```
+2. **Open in Godot:** Import `project.godot` using Godot 4 (.NET).
+3. **Build and Run:** Restore/build `LexiForge.csproj` and run the project via the editor.
+
 
 ## Project Structure
 
