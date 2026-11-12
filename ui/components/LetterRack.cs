@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using LexiForge.Autoload;
 using LexiForge.Core;
 
 namespace LexiForge.UI;
@@ -68,9 +69,14 @@ public sealed partial class LetterRack : Control
 
         var actions = Ui.MakeRow(18);
         column.AddChild(actions);
-        actions.AddChild(Ui.MakeButton("Shuffle", () => Shuffle(), Ui.PanelRaised, 96, 28));
-        actions.AddChild(Ui.MakeButton("Undo", RemoveLast, Ui.PanelRaised, 96, 28));
-        _submitButton = Ui.MakeButton("Forge Word", SubmitCurrent, Ui.Ember, 96, 30);
+        // Shuffle and Undo emit their own semantic cues inside their handlers,
+        // so the generic tap is suppressed: one tap, one sound
+        // (AUDIO_DESIGN.md section 4.2).
+        actions.AddChild(Ui.MakeButton("Shuffle", () => Shuffle(), Ui.PanelRaised, 96, 28, null));
+        actions.AddChild(Ui.MakeButton("Undo", RemoveLast, Ui.PanelRaised, 96, 28, null));
+        // tapCue null: the submission itself is answered synchronously by a
+        // word.* cue in ForgeScreen, so a tap here would double up.
+        _submitButton = Ui.MakeButton("Forge Word", SubmitCurrent, Ui.Ember, 96, 30, null);
         actions.AddChild(_submitButton);
     }
 
@@ -143,8 +149,17 @@ public sealed partial class LetterRack : Control
         _dragTileCount++;
         UpdateTile(index);
         EmitCurrentWord();
+        // Magnitude = 1-based letter index. The catalogue maps it onto the
+        // D-major-pentatonic ladder, so spelling a word becomes a melody.
+        EventBus.Cue("tile.pick", _selection.Count);
     }
 
+    /// <summary>
+    /// Drops the current selection. Deliberately SILENT: this runs at the start
+    /// of every gesture and after every submission, so a cue here would fire a
+    /// phantom "undo" on each tap. Explicit Undo (RemoveLast) is the only path
+    /// that may sound (AUDIO_DESIGN.md section 4.5).
+    /// </summary>
     public void ClearSelection()
     {
         foreach (int index in _selection)
@@ -164,6 +179,7 @@ public sealed partial class LetterRack : Control
         _used[index] = false;
         UpdateTile(index);
         EmitCurrentWord();
+        EventBus.Cue("tile.undo");
     }
 
     private string BuildWord()
@@ -202,6 +218,7 @@ public sealed partial class LetterRack : Control
         _selection.Clear();
         for (int i = 0; i < _tiles.Length; i++) UpdateTile(i);
         EmitCurrentWord();
+        EventBus.Cue("tile.shuffle");
         EmitSignal(SignalName.ShuffleRequested);
     }
 

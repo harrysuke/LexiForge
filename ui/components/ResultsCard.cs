@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using Godot;
+using LexiForge.Autoload;
 using LexiForge.Core;
 
 namespace LexiForge.UI;
@@ -86,6 +87,8 @@ public sealed partial class ResultsCard : Control
         _doubleButton.Disabled = false;
         _doubleButton.Text = "Double the haul (opt-in ad)";
         Visible = true;
+        // The card is a gift, not a pop-up: a soft arrival, no fanfare.
+        EventBus.Cue("ui.open");
     }
 
     /// <summary>Called by the screen only after the rewarded callback granted the bonus.</summary>
@@ -106,7 +109,14 @@ public sealed partial class ResultsCard : Control
         _doubleButton.Text = "Ad unavailable — tap to retry";
     }
 
-    public void Close() => Visible = false;
+    /// <summary>Idempotent: ResetFor calls this even when the card was never shown.</summary>
+    public void Close()
+    {
+        if (!Visible) return;
+        Visible = false;
+        EventBus.Cue("ui.close");
+    }
+
     public bool IsOpen => Visible;
 
     private static string StarGlyphs(int stars)

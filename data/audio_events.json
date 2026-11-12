@@ -1,0 +1,377 @@
+{
+  "version": "audio-1.0.0",
+  "mixRateHz": 44100,
+  "voicePoolSize": 16,
+  "maxOneShots": 12,
+  "masterLimiterCeilingDb": -1.0,
+  "masterTargetLufs": -18,
+  "masterTruePeakDbTp": -1.0,
+  "buses": [
+    { "name": "Music", "volumeDb": -9.0, "send": "Master", "note": "Stem players live here. Ducking and user Music slider are applied to this bus." },
+    { "name": "SFX",   "volumeDb": -2.0, "send": "Master", "note": "Gameplay feedback. Highest-priority one-shots." },
+    { "name": "UI",    "volumeDb": -4.0, "send": "Master", "note": "Chrome, taps, transitions. Folded into the SFX user slider." },
+    { "name": "AMB",   "volumeDb": -18.0,"send": "Master", "note": "Forge room bed. Very low, never carries information." }
+  ],
+  "duckDefaults": { "bus": "Music", "attackMs": 80, "holdMs": 350, "releaseMs": 450 },
+  "adAttenuationDb": -30.0,
+  "pauseAttenuationDb": -8.0,
+  "backgroundAttenuationDb": -80.0,
+  "fadeSeconds": { "bus": 0.18, "stem": 1.2, "screen": 0.28 },
+  "music": {
+    "bpm": 78,
+    "bars": 4,
+    "loopSeconds": 12.307692,
+    "driftCorrectionSeconds": 0.025,
+    "stems": [
+      { "name": "bed",  "path": "res://audio/music/music_bed.wav",  "gainDb": 0.0 },
+      { "name": "flow", "path": "res://audio/music/music_flow.wav", "gainDb": -60.0 },
+      { "name": "heat", "path": "res://audio/music/music_heat.wav", "gainDb": -60.0 },
+      { "name": "draft","path": "res://audio/music/music_draft.wav","gainDb": -60.0 }
+    ],
+    "ambience": { "path": "res://audio/amb/amb_forge_room.wav", "gainDb": 0.0 },
+    "states": {
+      "Home":      { "gains": { "bed": 0.0,  "flow": -60.0, "heat": -60.0, "draft": -60.0 }, "adaptive": false },
+      "Forge":     { "gains": { "bed": 0.0,  "flow": -60.0, "heat": -60.0, "draft": -60.0 }, "adaptive": true  },
+      "RuneDraft": { "gains": { "bed": -3.0, "flow": -60.0, "heat": -60.0, "draft": 0.0  }, "adaptive": false },
+      "RunEnd":    { "gains": { "bed": -7.0, "flow": -60.0, "heat": -60.0, "draft": -60.0 }, "adaptive": false }
+    },
+    "adaptive": {
+      "flow": { "onAt": 145, "fullAt": 220, "minGainDb": -60.0, "maxGainDb": -5.0 },
+      "heat": { "onAt": 45, "fullAt": 90, "minGainDb": -60.0, "maxGainDb": -8.0 }
+    },
+    "heatThresholds": [40, 70, 90]
+  },
+  "events": [
+    {
+      "id": "ui.tap", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/ui_tap_01.wav", "res://audio/sfx/ui/ui_tap_02.wav", "res://audio/sfx/ui/ui_tap_03.wav"],
+      "gainDb": 0.0, "loudnessTargetLufs": -26, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 45, "maxInstances": 2, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 5 },
+      "wired": true, "trigger": "Ui.MakeButton -> EventBus.Cue('ui.tap')",
+      "productionBrief": "Dry 25 ms wood-on-wood tick, 1.5-3 kHz centre, no tail. Three subtly different grains. Must not become irritating at hundreds of taps per session.",
+      "mixNotes": "Quietest layer in the game. Never duck music."
+    },
+    {
+      "id": "ui.back", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/ui_back_01.wav", "res://audio/sfx/ui/ui_back_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -26, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 80, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "Home / RunEnd Home button, pause secondary (leave run / quit)",
+      "productionBrief": "Softer, lower version of ui.tap with a slight downward inflection. Closing gesture, not a rejection."
+    },
+    {
+      "id": "ui.open", "category": "ui", "bus": "UI", "priority": 1,
+      "streams": ["res://audio/sfx/ui/ui_open_01.wav", "res://audio/sfx/ui/ui_open_02.wav"],
+      "gainDb": 0.0, "loudnessTargetLufs": -24, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 100, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 3 },
+      "wired": true, "trigger": "PauseOverlay / ResultsCard / AudioSettingsPanel Open()",
+      "productionBrief": "Panel arrival: soft paper/card slide with a 120 ms airy rise. Results card must feel like a gift, not a pop-up."
+    },
+    {
+      "id": "ui.close", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/ui_close_01.wav", "res://audio/sfx/ui/ui_close_02.wav"],
+      "gainDb": -2.0, "loudnessTargetLufs": -26, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 100, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 3 },
+      "wired": true, "trigger": "PauseOverlay / ResultsCard / AudioSettingsPanel Close()",
+      "productionBrief": "Reverse of ui.open, 90 ms, quieter. No suction or whoosh."
+    },
+    {
+      "id": "ui.toggle", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/ui_toggle_01.wav", "res://audio/sfx/ui/ui_toggle_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -26, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 60, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "Home privacy button; AudioSettingsPanel switches + slider commit",
+      "productionBrief": "Two-state click; on is a half-step brighter than off. Used to audition volume changes."
+    },
+    {
+      "id": "ui.disabled", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/ui_disabled_01.wav"],
+      "gainDb": -4.0, "loudnessTargetLufs": -28, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 150, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "Rejected hint, unaffordable reroll/cool, unavailable ad or run start",
+      "productionBrief": "Muted, short, non-judgemental thud. Explicitly NOT an error buzzer - GDD pillar: no punishment spirals."
+    },
+    {
+      "id": "tile.pick", "category": "tile", "bus": "SFX", "priority": 1,
+      "streams": [
+        "res://audio/sfx/tile/tile_pick_01.wav", "res://audio/sfx/tile/tile_pick_02.wav",
+        "res://audio/sfx/tile/tile_pick_03.wav", "res://audio/sfx/tile/tile_pick_04.wav",
+        "res://audio/sfx/tile/tile_pick_05.wav"
+      ],
+      "gainDb": -3.0, "loudnessTargetLufs": -22, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 28, "maxInstances": 4, "loop": false,
+      "pitch": { "mode": "ladder", "semitones": [0, 2, 4, 7, 9, 12, 14], "magnitudeOffset": 1, "magnitudeDivisor": 1, "jitterCents": 4 },
+      "wired": true, "trigger": "LetterRack.AddTileAt -> Cue('tile.pick', selectionCount)",
+      "productionBrief": "Ceramic rune tile tapped: 55 ms wooden/stone tok, 700 Hz body + 2.2 kHz click. Five grain variations. Runtime ladder raises pitch with each letter of the word - spelling becomes a melody.",
+      "mixNotes": "≤5 ms leading silence. This is the highest-frequency event in the game; five variations and micro-pitch are mandatory to avoid machine-gun fatigue."
+    },
+    {
+      "id": "tile.place", "category": "tile", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/tile/tile_place_01.wav", "res://audio/sfx/tile/tile_place_02.wav", "res://audio/sfx/tile/tile_place_03.wav"],
+      "gainDb": -2.0, "loudnessTargetLufs": -21, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 40, "maxInstances": 4, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 5 },
+      "wired": true, "trigger": "ForgeScreen accepted word -> Cue('tile.place', wordLength)",
+      "productionBrief": "Rune locking into a grid slot: 70 ms stone-on-stone snap with a tiny metallic overtone. P1: fire once per tile from WordGrid's fly-in animation instead of once per word.",
+      "mixNotes": "Must sit under word.solution; never mask it."
+    },
+    {
+      "id": "tile.undo", "category": "tile", "bus": "SFX", "priority": 0,
+      "streams": ["res://audio/sfx/tile/tile_undo_01.wav", "res://audio/sfx/tile/tile_undo_02.wav"],
+      "gainDb": -3.0, "loudnessTargetLufs": -25, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 60, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "LetterRack.RemoveLast (explicit Undo only - ClearSelection is silent)",
+      "productionBrief": "Soft reverse tok, 60 ms, falling. Neutral - clearing a selection is free and unlimited (GDD 3.1)."
+    },
+    {
+      "id": "tile.shuffle", "category": "tile", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/tile/tile_shuffle_01.wav", "res://audio/sfx/tile/tile_shuffle_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -20, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 300, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 3 },
+      "wired": true, "trigger": "LetterRack.Shuffle",
+      "productionBrief": "Five rune tiles swept across a wooden board, 260 ms, with a soft rattle and a final settle. Free and unlimited, so it must stay friendly."
+    },
+    {
+      "id": "word.solution", "category": "word", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/word/word_solution_01.wav", "res://audio/sfx/word/word_solution_02.wav", "res://audio/sfx/word/word_solution_03.wav"],
+      "gainDb": 1.0, "loudnessTargetLufs": -18, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 60, "maxInstances": 2, "loop": false,
+      "pitch": { "mode": "ladder", "semitones": [0, 2, 4, 7, 9, 12], "magnitudeOffset": 100, "magnitudeDivisor": 25, "jitterCents": 3 },
+      "duck": { "bus": "Music", "depthDb": 2.0, "attackMs": 60, "holdMs": 180, "releaseMs": 350 },
+      "wired": true, "trigger": "ForgeScreen solution word -> Cue('word.solution', flowHundredths)",
+      "productionBrief": "Warm marimba/felt-piano note, 320 ms, fundamental 300-600 Hz plus 2nd harmonic for phone speakers. Runtime ladder maps Flow 1.0-2.5x onto a rising D major pentatonic phrase - the core reward signature.",
+      "mixNotes": "The single most important sound in the game. Must be audible over music and over ambience without being shrill."
+    },
+    {
+      "id": "word.keystone", "category": "word", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/word/word_keystone_01.wav", "res://audio/sfx/word/word_keystone_02.wav"],
+      "gainDb": 2.0, "loudnessTargetLufs": -16, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 200, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 4.0, "attackMs": 60, "holdMs": 320, "releaseMs": 500 },
+      "wired": true, "trigger": "ForgeScreen keystone solve (GDD 3.2 aha rule)",
+      "productionBrief": "The aha. A glass/bell cluster resolving upward, 900 ms tail with a short plate reverb, plus one low warm anvil note for weight. Reserved for the single keystone word per forge - never used anywhere else.",
+      "mixNotes": "Critical priority: never voice-stolen. Only hero cue allowed a >500 ms tail."
+    },
+    {
+      "id": "word.bonus", "category": "word", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/word/word_bonus_01.wav", "res://audio/sfx/word/word_bonus_02.wav", "res://audio/sfx/word/word_bonus_03.wav"],
+      "gainDb": -2.0, "loudnessTargetLufs": -22, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 60, "maxInstances": 2, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 8 },
+      "wired": true, "trigger": "ForgeScreen Bonus Jar word",
+      "productionBrief": "A coin dropped into the Bonus Jar: small glass tink, 180 ms. Lighter and higher than word.solution - a curiosity reward, not a win. Three grains, wider pitch jitter for the variable-ratio feel."
+    },
+    {
+      "id": "word.reject", "category": "word", "bus": "SFX", "priority": 0,
+      "streams": ["res://audio/sfx/word/word_reject_01.wav", "res://audio/sfx/word/word_reject_02.wav", "res://audio/sfx/word/word_reject_03.wav"],
+      "gainDb": -6.0, "loudnessTargetLufs": -27, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 130, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 5 },
+      "wired": true, "trigger": "ForgeScreen any non-success submission",
+      "productionBrief": "A soft low wobble, 160 ms, 180-260 Hz with a gentle downward bend. Absolutely no buzzer, no 'wrong' horn, no harsh transient. GDD 3.1: a wrong word must never feel like a loss.",
+      "mixNotes": "Quieter than every positive cue. Should be almost inaudible on a phone speaker at 50% volume."
+    },
+    {
+      "id": "flow.break", "category": "word", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/word/flow_break_01.wav", "res://audio/sfx/word/flow_break_02.wav"],
+      "gainDb": -4.0, "loudnessTargetLufs": -24, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 200, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 2 },
+      "wired": true, "trigger": "ForgeScreen on a penalised rejection while pre-submit Flow > 1.15",
+      "productionBrief": "Two-note gentle descending resolve, 260 ms. Signals 'the streak resets' without scolding. Pairs with the music flow stem fading out."
+    },
+    {
+      "id": "forge.start", "category": "forge", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/forge/forge_start_01.wav", "res://audio/sfx/forge/forge_start_02.wav"],
+      "gainDb": -3.0, "loudnessTargetLufs": -23, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 200, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 3 },
+      "wired": true, "trigger": "EventBus.ForgeStarted",
+      "productionBrief": "A quiet breath of warm air and one soft wooden settle, 300 ms. Says 'a fresh board' without a start fanfare - no scene reload, no loading screen (GDD 11.5)."
+    },
+    {
+      "id": "forge.complete", "category": "forge", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/forge/forge_complete_01.wav", "res://audio/sfx/forge/forge_complete_02.wav"],
+      "gainDb": 1.5, "loudnessTargetLufs": -16, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 300, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 6.0, "attackMs": 80, "holdMs": 500, "releaseMs": 650 },
+      "wired": true, "trigger": "EventBus.ForgeCompleted",
+      "productionBrief": "Three-note rising felt-piano arpeggio plus a soft hammer-on-anvil thump and a shimmer, 1.2 s. Warm and satisfied, never triumphant-brass. Results card arrives on the tail.",
+      "mixNotes": "Hero cue, never stolen. Duck music 6 dB so the cadence reads."
+    },
+    {
+      "id": "forge.perfect", "category": "forge", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/forge/forge_perfect_01.wav", "res://audio/sfx/forge/forge_perfect_02.wav"],
+      "gainDb": 0.0, "loudnessTargetLufs": -18, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 300, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 3.0, "attackMs": 60, "holdMs": 250, "releaseMs": 450 },
+      "wired": true, "trigger": "EventBus.ForgeCompleted with stars == 3",
+      "productionBrief": "An extra high bell harmonic layered over forge.complete, 800 ms. Reserved for 3-star forges; must be additive, not a second stinger."
+    },
+    {
+      "id": "hint.reveal", "category": "forge", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/forge/hint_reveal_01.wav", "res://audio/sfx/forge/hint_reveal_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -20, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 120, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "EventBus.HintGranted",
+      "productionBrief": "A single glass ping with a small inky-paper rustle, 300 ms. Helpful and clean. Used for coin, ad, free and scripted hints alike - buying a hint must not sound different from a free one."
+    },
+    {
+      "id": "nudge.reveal", "category": "forge", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/forge/nudge_reveal_01.wav", "res://audio/sfx/forge/nudge_reveal_02.wav"],
+      "gainDb": -4.0, "loudnessTargetLufs": -24, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 150, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "ForgeScreen free nudge / struggle reveal",
+      "productionBrief": "Softer, lower cousin of hint.reveal. Automatic anti-frustration help must feel like the game noticing you, not a notification."
+    },
+    {
+      "id": "heat.cool", "category": "run", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/run/heat_cool_01.wav", "res://audio/sfx/run/heat_cool_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -20, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 400, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "EventBus.HeatChanged with a drop >= 10 (Cool the forge)",
+      "productionBrief": "A cooling descent: soft airy sweep from 900 Hz to 300 Hz plus a low water-on-hot-metal hiss, 700 ms. Relief, not a fire extinguisher."
+    },
+    {
+      "id": "heat.threshold", "category": "run", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/run/heat_threshold_01.wav", "res://audio/sfx/run/heat_threshold_02.wav"],
+      "gainDb": -5.0, "loudnessTargetLufs": -25, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 1000, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "AudioEventBridge crossing Heat 40 / 70 / 90",
+      "productionBrief": "A low warm swell, 600 ms, 120-220 Hz with an octave harmonic for small speakers. NO alarm, NO ticking, NO tempo increase. GDD pillar: fluency, not pressure; Heat is an arc, not a threat.",
+      "mixNotes": "Most of the Heat arc should be carried by the music heat stem, not by one-shots."
+    },
+    {
+      "id": "rune.draft.open", "category": "rune", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/rune/rune_draft_open_01.wav", "res://audio/sfx/rune/rune_draft_open_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -19, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 400, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "EventBus.DraftOffered",
+      "productionBrief": "Three rune stones laid on a table with a shimmering overtone, 600 ms. A moment of choice, not a loot-box reveal."
+    },
+    {
+      "id": "rune.pick", "category": "rune", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/rune/rune_pick_01.wav", "res://audio/sfx/rune/rune_pick_02.wav", "res://audio/sfx/rune/rune_pick_03.wav"],
+      "gainDb": 0.5, "loudnessTargetLufs": -17, "variation": "byMagnitude",
+      "cooldownMs": 200, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 3.0, "attackMs": 70, "holdMs": 250, "releaseMs": 450 },
+      "wired": true, "trigger": "RuneDraftScreen.Pick -> Cue('rune.pick', familyIndex 0/1/2)",
+      "productionBrief": "One metallic strike with a 500 ms ring, three timbres: bright steel (Score), warm bronze (Economy), soft slate (Utility). Variation index is the rune family, not random.",
+      "mixNotes": "byMagnitude variation mode: magnitude selects the stem."
+    },
+    {
+      "id": "rune.reroll", "category": "rune", "bus": "SFX", "priority": 1,
+      "streams": ["res://audio/sfx/rune/rune_reroll_01.wav", "res://audio/sfx/rune/rune_reroll_02.wav"],
+      "gainDb": -2.0, "loudnessTargetLufs": -22, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 250, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 4 },
+      "wired": true, "trigger": "RuneDraftScreen.OnReroll on success",
+      "productionBrief": "Rune stones swirled and re-dealt, 350 ms. Same palette as tile.shuffle but with a metallic shimmer."
+    },
+    {
+      "id": "run.start", "category": "run", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/run/run_start_01.wav", "res://audio/sfx/run/run_start_02.wav"],
+      "gainDb": -2.0, "loudnessTargetLufs": -20, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 500, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "Home PLAY/Daily and RunEnd NEW RUN, on a successful start",
+      "productionBrief": "A forge door opening: low wooden creak plus a warm ember swell, 700 ms. Says 'let's begin', never a countdown."
+    },
+    {
+      "id": "run.end", "category": "run", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/run/run_end_01.wav", "res://audio/sfx/run/run_end_02.wav"],
+      "gainDb": 1.0, "loudnessTargetLufs": -16, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 500, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 5.0, "attackMs": 90, "holdMs": 600, "releaseMs": 700 },
+      "wired": true, "trigger": "EventBus.RunEnded",
+      "productionBrief": "A resolved four-note cadence on felt piano with a final soft anvil note, 1.6 s. GDD 3.3: ending a run is a reward moment, not a loss screen. No minor key, no decrescendo into silence.",
+      "mixNotes": "Longest cue in the game. Music bed drops 7 dB underneath it."
+    },
+    {
+      "id": "coin.earn", "category": "economy", "bus": "SFX", "priority": 0,
+      "streams": ["res://audio/sfx/economy/coin_earn_01.wav", "res://audio/sfx/economy/coin_earn_02.wav", "res://audio/sfx/economy/coin_earn_03.wav"],
+      "gainDb": -5.0, "loudnessTargetLufs": -26, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 130, "maxInstances": 2, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 10 },
+      "wired": true, "trigger": "EventBus.CoinsChanged with delta >= 20",
+      "productionBrief": "Tiny wooden coin into a dish, 110 ms. Coins are deliberately abundant juice (GDD 7.4) - this must be the quietest positive cue, never a slot-machine jingle.",
+      "mixNotes": "Cooldown 130 ms + 3 grains prevents a wall of coin pings when a forge pays out."
+    },
+    {
+      "id": "mark.earn", "category": "economy", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/economy/mark_earn_01.wav", "res://audio/sfx/economy/mark_earn_02.wav"],
+      "gainDb": 0.0, "loudnessTargetLufs": -19, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 250, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "EventBus.MarksChanged with delta > 0",
+      "productionBrief": "A patron's seal: small brass bell plus a wax-stamp press, 450 ms. Rarer and more deliberate than coin.earn.",
+      "mixNotes": "Fires for EVERY rewarded ad (GDD 7.2) - must stay neutral and never over-celebrate an ad."
+    },
+    {
+      "id": "ad.reward", "category": "economy", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/economy/ad_reward_01.wav", "res://audio/sfx/economy/ad_reward_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -20, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 400, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "EventBus.RewardGranted (grant confirmation only)",
+      "productionBrief": "A two-note confirm, 300 ms, calm and factual. Confirms a completed value exchange, not a jackpot. Fires ONLY from the real reward grant, never from ad-close.",
+      "mixNotes": "Player-first charter: no audio that pressures the player into watching another ad."
+    },
+    {
+      "id": "atlas.unlock", "category": "meta", "bus": "SFX", "priority": 2,
+      "streams": ["res://audio/sfx/meta/atlas_unlock_01.wav", "res://audio/sfx/meta/atlas_unlock_02.wav"],
+      "gainDb": -1.0, "loudnessTargetLufs": -19, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 400, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": false, "trigger": "P2: Atlas scene unlocked",
+      "productionBrief": "A heavy illustrated page turning plus a soft gold-leaf shimmer, 700 ms. Collection reward, no gameplay power (GDD 5)."
+    },
+    {
+      "id": "daily.perfect", "category": "meta", "bus": "SFX", "priority": 3,
+      "streams": ["res://audio/sfx/meta/daily_perfect_01.wav", "res://audio/sfx/meta/daily_perfect_02.wav"],
+      "gainDb": 1.0, "loudnessTargetLufs": -17, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 500, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "duck": { "bus": "Music", "depthDb": 4.0, "attackMs": 80, "holdMs": 350, "releaseMs": 550 },
+      "wired": false, "trigger": "P2: perfect Daily Forge solve",
+      "productionBrief": "A bright but gentle five-note pentatonic flourish, 1.0 s. Once per day only, so it can be a little special. No fanfare."
+    },
+    {
+      "id": "screen.whoosh", "category": "ui", "bus": "UI", "priority": 0,
+      "streams": ["res://audio/sfx/ui/screen_whoosh_01.wav", "res://audio/sfx/ui/screen_whoosh_02.wav"],
+      "gainDb": -6.0, "loudnessTargetLufs": -27, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 150, "maxInstances": 1, "loop": false,
+      "pitch": { "mode": "jitter", "jitterCents": 3 },
+      "wired": true, "trigger": "EventBus.ScreenChanged",
+      "productionBrief": "Barely-there warm air movement, 180 ms. Screens are pooled and transitions must feel frictionless (GDD 11.5) - this is glue, not a transition effect."
+    },
+    {
+      "id": "amb.forge_room", "category": "ambience", "bus": "AMB", "priority": 0,
+      "streams": ["res://audio/amb/amb_forge_room.wav"],
+      "gainDb": 0.0, "loudnessTargetLufs": -30, "variation": "roundRobinNoRepeat",
+      "cooldownMs": 0, "maxInstances": 1, "loop": true,
+      "pitch": { "mode": "fixed", "jitterCents": 0 },
+      "wired": true, "trigger": "AudioDirector boot (single looping bed)",
+      "productionBrief": "8 s seamless forge-room bed: low ember crackle, distant soft bellows breath, occasional wood settle. No tonal content, no rhythm, no identifiable loop point. High-pass 180 Hz so it survives small speakers as texture, not rumble.",
+      "mixNotes": "Never carries gameplay information. First thing to mute in Reduced Sound Density mode."
+    }
+  ]
+}

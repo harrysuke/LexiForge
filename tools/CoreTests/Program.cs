@@ -47,6 +47,7 @@ internal static class Program
         TestRunState(cfg);
         TestP0UiContracts(cfg);
         TestGeneratedForges(cfg, dataDir);
+        TestAudioCatalog(root);
 
         Console.WriteLine(new string('-', 88));
         Console.WriteLine($"PASS {_passed}   FAIL {Failures.Count}");
@@ -496,6 +497,62 @@ internal static class Program
     }
 
     // ------------------------------------------------------------------ helpers
+    /// <summary>
+    /// Audio catalogue contract (design/AUDIO_DESIGN.md). The shipped game, the
+    /// greybox generator and this harness all read the SAME json, so a typo in an
+    /// event id or a missing .wav breaks CI instead of silently going mute.
+    /// </summary>
+    private static void TestAudioCatalog(string root)
+    {
+        string path = Path.Combine(root, "godot", "data", "audio_events.json");
+        AudioEventTable table = AudioEventTable.Load(path);
+
+        bool valid = table.Validate(out List<string> errors);
+        Check("audio catalog validates", valid, string.Join(" | ", errors));
+        Check("audio catalog has events", table.Events.Count >= 30, table.Events.Count.ToString());
+        Check("audio buses are Music/SFX/UI/AMB",
+            table.Buses.Select(b => b.Name).OrderBy(x => x)
+                .SequenceEqual(new[] { "AMB", "Music", "SFX", "UI" }));
+        Check("voice pool covers one-shot cap", table.MaxOneShots <= table.VoicePoolSize);
+        Check("all stream paths are unique res://",
+            table.AllStreamPaths().All(p => p.StartsWith("res://", StringComparison.Ordinal)));
+
+        // Every bundled asset must exist. This is why the greybox generator reads
+        // the catalog rather than maintaining a second file list.
+        bool assets = table.ValidateAssets(Path.Combine(root, "godot"), out List<string> missing);
+        Check("every catalogued audio asset exists", assets,
+            missing.Count == 0 ? "" : $"{missing.Count} missing, first: {missing[0]}");
+
+        // Signature mechanics: spelling ladder and Flow motif.
+        var tile = table.Find("tile.pick")!;
+        var word = table.Find("word.solution")!;
+        Check("tile.pick uses letter-index ladder", tile.Pitch.Mode == AudioPitchMode.Ladder);
+        Check("spelling ladder rises", tile.Pitch.PitchScale(7, 0) > tile.Pitch.PitchScale(1, 0));
+        Check("Flow motif rises with Flow", word.Pitch.PitchScale(250, 0) > word.Pitch.PitchScale(100, 0));
+        Check("keystone is never voice-stolen", table.Find("word.keystone")!.Priority == 3);
+        Check("reject is quieter than solution",
+            table.Find("word.reject")!.GainDb < word.GainDb);
+
+        // Anti-repetition: no immediate repeat over a long run of tile taps.
+        var picker = new AudioVariationPicker(1234);
+        int last = -1;
+        bool repeated = false;
+        for (int i = 0; i < 200; i++)
+        {
+            int v = picker.Next(tile.Streams.Length, AudioVariationMode.RoundRobinNoRepeat, i);
+            if (v == last) repeated = true;
+            last = v;
+        }
+        Check("tile variations never repeat back-to-back", !repeated);
+
+        // Adaptive music band is monotonic and bounded.
+        double low = AudioEventTable.AdaptiveGain(table.Music.Adaptive.Heat, 0);
+        double mid = AudioEventTable.AdaptiveGain(table.Music.Adaptive.Heat, 70);
+        double high = AudioEventTable.AdaptiveGain(table.Music.Adaptive.Heat, 100);
+        Check("Heat stem gain is monotonic", low < mid && mid < high,
+            $"{low:F1} / {mid:F1} / {high:F1}");
+    }
+
     private static void Check(string name, bool condition, string? detail = null)
     {
         if (condition) { _passed++; Console.WriteLine($"  ok  {name}"); }

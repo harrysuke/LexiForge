@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using LexiForge.Autoload;
 
 namespace LexiForge.UI;
 
@@ -57,8 +58,15 @@ public static class Ui
         return label;
     }
 
+    /// <param name="tapCue">
+    /// Semantic feedback cue for this button. Pass null when the button emits
+    /// its OWN cue (Shuffle, Undo, a panel open/close) so two sounds never fire
+    /// on one tap. Views never name a bus or an audio file - see
+    /// AUDIO_DESIGN.md section 4.
+    /// </param>
     public static Button MakeButton(string text, Action onPressed, Color? background = null,
-                                    int minHeight = 108, int fontSize = 34)
+                                    int minHeight = 108, int fontSize = 34,
+                                    string? tapCue = "ui.tap")
     {
         var button = new Button
         {
@@ -75,7 +83,14 @@ public static class Ui
         button.AddThemeStyleboxOverride("hover", Box(Ember));
         button.AddThemeStyleboxOverride("pressed", Box(Gold));
         button.AddThemeStyleboxOverride("disabled", Box(Locked));
-        button.Pressed += onPressed;
+        button.Pressed += () =>
+        {
+            // Cue BEFORE the action: the tap must start on the input frame,
+            // before onPressed() navigates, opens a panel or awaits an ad.
+            // Emitting through EventBus.Cue keeps this view audio-agnostic.
+            if (tapCue is not null) EventBus.Cue(tapCue);
+            onPressed();
+        };
         return button;
     }
 

@@ -148,11 +148,13 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
             _session.TryGrantStruggleReveal(out char struggleLetter, out int struggleSlot, out _))
         {
             _hud.Toast($"Free letter: {char.ToUpperInvariant(struggleLetter)} — keep going!", Ui.Good);
+            EventBus.Cue("nudge.reveal");
             AnalyticsService.Instance.Record("struggle_reveal", struggleSlot.ToString());
         }
         else if (_session.TryGetNudge(out char letter, out int slot, out _))
         {
             _hud.Toast($"Free nudge: {char.ToUpperInvariant(letter)}", Ui.Good);
+            EventBus.Cue("nudge.reveal");
             AnalyticsService.Instance.Record("nudge", slot.ToString());
         }
 
@@ -164,6 +166,8 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     {
         if (_session is null || _results.IsOpen) { _rack.ClearSelection(); return; }
 
+        // Pre-submit Flow decides whether a penalty actually broke a streak.
+        int flowBefore = (int)Math.Round(_session.Flow * 100);
         WordSubmission submission = _session.Submit(word);
         _rack.ClearSelection();
         _grid.Refresh();
@@ -171,6 +175,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
         if (submission.IsSuccess)
         {
+            EmitWordCue(submission);
             string message = submission.Kind == WordSubmissionKind.SolutionWord
                 ? $"FORGED {submission.Word.ToUpperInvariant()}  ·  Flow {submission.Flow:0.00}x"
                 : $"+{ConfigService.Instance.Config.Economy.PerBonusWord} coins  ·  Bonus Jar";
@@ -181,6 +186,11 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         }
         else
         {
+            // Neutral by design: the catalogue keeps word.reject the quietest
+            // negative cue in the game (GDD 3.1 - a wrong word is never a loss).
+            EventBus.Cue("word.reject");
+            if (submission.IsPenalty && flowBefore > 115) EventBus.Cue("flow.break");
+
             string reason = ReasonFor(submission.Kind);
             _hud.Toast(reason, Ui.Bad);
             if (submission.IsPenalty)
@@ -191,6 +201,31 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         }
 
         if (submission.ForgeCompleted && _session.Outcome is not null) ShowResults();
+    }
+
+    /// <summary>
+    /// Kind-specific word feedback. AudioEventBridge deliberately cannot do this:
+    /// WordAccepted does not say solution vs bonus vs keystone, so the view that
+    /// owns the submission emits the precise cue (AUDIO_DESIGN.md section 4.2
+    /// rule 3). The bridge still drives adaptive music from the signal.
+    /// </summary>
+    private void EmitWordCue(in WordSubmission submission)
+    {
+        bool keystone = _forge is not null &&
+                        string.Equals(submission.Word, _forge.KeystoneWord, StringComparison.OrdinalIgnoreCase);
+        if (keystone)
+        {
+            // The aha. Priority 3, never voice-stolen, ducks music 4 dB.
+            EventBus.Cue("word.keystone");
+            return;
+        }
+        if (submission.Kind == WordSubmissionKind.SolutionWord)
+        {
+            EventBus.Cue("word.solution", (int)Math.Round(submission.Flow * 100));
+            EventBus.Cue("tile.place", submission.Word.Length);
+            return;
+        }
+        EventBus.Cue("word.bonus");
     }
 
     private static string ReasonFor(WordSubmissionKind kind) => kind switch
@@ -218,6 +253,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
         if (!hint.Granted)
         {
+            EventBus.Cue("ui.disabled");
             _hud.Toast(hint.Reason switch
             {
                 "insufficient_coins" => "Not enough coins for a hint",
@@ -256,7 +292,10 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
             if (granted && _session is not null && !_results.IsOpen)
                 ApplyHint(HintSource.Ad);
             else
+            {
+                EventBus.Cue("ui.disabled");
                 _hud.Toast("Ad unavailable — coin hint still works.", Ui.Muted);
+            }
         }
         finally { _adBusy = false; }
     }
@@ -292,6 +331,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
             bool granted = await AdManager.Instance.TryRewardedAsync("R_DOUBLE", extra);
             if (!granted)
             {
+                EventBus.Cue("ui.disabled");
                 _results.NoteAdUnavailable();
                 return;
             }

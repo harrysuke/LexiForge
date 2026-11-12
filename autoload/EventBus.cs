@@ -30,6 +30,21 @@ public sealed partial class EventBus : Node
     [Signal] public delegate void ScreenChangedEventHandler(string screenName);
     [Signal] public delegate void PauseRequestedEventHandler();
 
+    /// <summary>
+    /// Audio-agnostic feedback channel (design/AUDIO_DESIGN.md section 4). Views
+    /// emit a semantic cue id + magnitude; AudioEventBridge, haptics and VFX
+    /// subscribe independently. cueId matches an audio_events.json event id,
+    /// but NO view is allowed to reference a bus, file or volume.
+    /// </summary>
+    [Signal] public delegate void FeedbackCueEventHandler(string cueId, int magnitude);
+
+    /// <summary>Null-safe emitter so views built before boot can still cue.</summary>
+    public static void Cue(string cueId, int magnitude = 0)
+    {
+        if (Instance is not null)
+            Instance.EmitSignal(SignalName.FeedbackCue, cueId, magnitude);
+    }
+
     public override void _Ready()
     {
         Instance = this;

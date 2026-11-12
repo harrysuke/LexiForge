@@ -17,6 +17,7 @@ public sealed partial class PauseOverlay : Control
 {
     private readonly string _secondaryLabel;
     private readonly Action _onSecondary;
+    private AudioSettingsPanel _settings = null!;
 
     private PauseOverlay(string secondaryLabel, Action onSecondary)
     {
@@ -59,12 +60,18 @@ public sealed partial class PauseOverlay : Control
 
         column.AddChild(Ui.MakeLabel("PAUSED", 48, Ui.Gold));
         column.AddChild(Ui.MakeLabel("Your forge is safe. Take your time.", 26, Ui.Muted));
-        column.AddChild(Ui.MakeButton("Resume", Close, Ui.Ember, 110, 34));
+        // tapCue is null on every button here: Open()/Close() and the settings
+        // panel emit their own cues, so a tap never doubles up (section 4.2).
+        column.AddChild(Ui.MakeButton("Resume", Close, Ui.Ember, 110, 34, null));
+        column.AddChild(Ui.MakeButton("Sound", () => _settings.Open(), Ui.PanelRaised, 96, 28, null));
         column.AddChild(Ui.MakeButton(_secondaryLabel, () =>
         {
             Close();
             _onSecondary();
-        }, Ui.PanelRaised, 100, 28));
+        }, Ui.PanelRaised, 100, 28, null));
+
+        // Added last so it draws above the pause card.
+        _settings = AudioSettingsPanel.AttachTo(this);
     }
 
     public bool IsOpen => Visible;
@@ -80,6 +87,7 @@ public sealed partial class PauseOverlay : Control
         if (IsOpen) return;
         Visible = true;
         MoveToFront();
+        EventBus.Cue("ui.open");
         SceneRouter.Instance.SetPaused(true);
     }
 
@@ -87,6 +95,10 @@ public sealed partial class PauseOverlay : Control
     {
         if (!IsOpen) return;
         Visible = false;
+        // Settings live above the pause card, so closing the overlay must take
+        // them with it; otherwise a pooled screen would keep a stale panel.
+        _settings?.Close();
+        EventBus.Cue("ui.close");
         SceneRouter.Instance.SetPaused(false);
     }
 }

@@ -42,8 +42,10 @@ public sealed partial class Home : Control, IScreen
         var spacer = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
         column.AddChild(spacer);
 
-        column.AddChild(Ui.MakeButton("PLAY", () => StartRun(false), Ui.Ember, 132, 42));
-        _daily = Ui.MakeButton("Daily Forge", () => StartRun(true), Ui.PanelRaised, 112, 32);
+        // tapCue is null: StartRun emits run.start (or ui.disabled) itself, so a
+        // failed start is silent-ish rather than a cheerful "begin" over an error.
+        column.AddChild(Ui.MakeButton("PLAY", () => StartRun(false), Ui.Ember, 132, 42, null));
+        _daily = Ui.MakeButton("Daily Forge", () => StartRun(true), Ui.PanelRaised, 112, 32, null);
         column.AddChild(_daily);
 
         _status = Ui.MakeLabel("", 26, Ui.Ember);
@@ -51,7 +53,7 @@ public sealed partial class Home : Control, IScreen
         _version = Ui.MakeLabel("", 20, Ui.Muted);
         column.AddChild(_version);
 
-        _privacy = Ui.MakeButton("Ad privacy: not set", TogglePrivacy, Ui.PanelRaised, 84, 24);
+        _privacy = Ui.MakeButton("Ad privacy: not set", TogglePrivacy, Ui.PanelRaised, 84, 24, "ui.toggle");
         column.AddChild(_privacy);
 
         _pause = PauseOverlay.AttachTo(this, "Quit game", () => GetTree().Quit());
@@ -128,6 +130,7 @@ public sealed partial class Home : Control, IScreen
         var forges = GameDataService.Instance.Forges;
         if (forges.Count == 0)
         {
+            EventBus.Cue("ui.disabled");
             _status.Text = "No forge catalogue loaded — restart the app.";
             return;
         }
@@ -135,6 +138,7 @@ public sealed partial class Home : Control, IScreen
         SaveData save = SaveService.Instance.Data;
         if (daily && !ProgressionService.Instance.IsDailyForgeAvailable(GameServices.UtcDay))
         {
+            EventBus.Cue("ui.disabled");
             _status.Text = "Daily Forge already claimed today.";
             return;
         }
@@ -156,9 +160,11 @@ public sealed partial class Home : Control, IScreen
         ForgeData? forge = ProgressionService.Instance.ForgeFor(0);
         if (forge is null)
         {
+            EventBus.Cue("ui.disabled");
             _status.Text = "No forge available for this run.";
             return;
         }
+        EventBus.Cue("run.start");
         SceneRouter.Instance.GoToForge(forge, 0, RunService.Instance.Effects);
     }
 

@@ -26,6 +26,7 @@
     <Compile Include="ads/**/*.cs" Link="Ads/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="data/**/*.cs" Link="Data/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="autoload/**/*.cs" Link="Autoload/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="audio/**/*.cs" Link="Audio/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="ui/**/*.cs" Link="UI/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

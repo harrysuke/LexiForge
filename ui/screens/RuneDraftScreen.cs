@@ -37,13 +37,15 @@ public sealed partial class RuneDraftScreen : Control, IScreen
         for (int i = 0; i < _cards.Length; i++)
         {
             int index = i; // captured once; the buttons are pooled for the session
-            var card = Ui.MakeButton("", () => Pick(index), Ui.PanelRaised, 200, 30);
+            // tapCue null: Pick() emits rune.pick with the rune's family index,
+            // which selects the timbre (steel / bronze / slate) in the catalogue.
+            var card = Ui.MakeButton("", () => Pick(index), Ui.PanelRaised, 200, 30, null);
             card.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             column.AddChild(card);
             _cards[i] = card;
         }
 
-        _reroll = Ui.MakeButton("Reroll offer", OnReroll, Ui.PanelRaised, 96, 28);
+        _reroll = Ui.MakeButton("Reroll offer", OnReroll, Ui.PanelRaised, 96, 28, null);
         column.AddChild(_reroll);
         _status = Ui.MakeLabel("", 26, Ui.Ember);
         column.AddChild(_status);
@@ -116,9 +118,11 @@ public sealed partial class RuneDraftScreen : Control, IScreen
                          EconomyService.Instance.Coins >= cfg.Sinks.RuneDraftRerollCoins;
         if (!canAfford)
         {
+            EventBus.Cue("ui.disabled");
             _status.Text = $"Need 1 Mark or {cfg.Sinks.RuneDraftRerollCoins} coins. Pick a rune to continue.";
             return;
         }
+        EventBus.Cue("rune.reroll");
         Render(RunService.Instance.RerollOffer());
     }
 
@@ -126,14 +130,25 @@ public sealed partial class RuneDraftScreen : Control, IScreen
     {
         if (index < 0 || index >= _offer.Count) return;
         RuneData rune = _offer[index];
+        // Magnitude = rune family, not a random index: the catalogue maps 0/1/2
+        // onto steel (Score), bronze (Economy) and slate (Utility).
+        EventBus.Cue("rune.pick", FamilyIndex(rune.Kind));
         RunService.Instance.Draft(rune);
         AnalyticsService.Instance.Record("rune_pick", rune.Id);
 
         int next = _runIndex + 1;
         ForgeData? forge = ProgressionService.Instance.ForgeFor(next);
-        if (forge is null) { SceneRouter.Instance.GoHome(); return; }
+        if (forge is null) { EventBus.Cue("ui.disabled"); SceneRouter.Instance.GoHome(); return; }
         SceneRouter.Instance.GoToForge(forge, next, RunService.Instance.Effects);
     }
+
+    /// <summary>Stable family order used by the catalogue's byMagnitude variation.</summary>
+    private static int FamilyIndex(RuneKind kind) => kind switch
+    {
+        RuneKind.Score => 0,
+        RuneKind.Economy => 1,
+        _ => 2 // Utility
+    };
 
     private void LeaveRun()
     {

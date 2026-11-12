@@ -99,6 +99,10 @@ public sealed partial class SceneRouter : Node
     {
         IsPaused = paused;
         GetTree().Paused = paused;
+        // One authoritative pause state: audio follows the router, so an
+        // overlay pause and a hardware-back pause behave identically.
+        // Null-safe because SceneRouter is registered before AudioDirector.
+        AudioDirector.Instance?.SetPaused(paused);
         if (paused) SaveService.Instance.Flush();
     }
 

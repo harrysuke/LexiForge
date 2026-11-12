@@ -100,7 +100,20 @@ public sealed partial class AdManager : Node
             return false;
         }
 
-        AdOutcome outcome = await _service.ShowRewardedAsync(placementId);
+        // Ad creative owns the audio channel for the impression. The finally
+        // guarantees the -30 dB duck is released on grant, cancel, no-fill and
+        // exception alike. AudioDirector.SetAdPlayback is idempotent, so the
+        // bridge's release on RewardGranted is a safe no-op.
+        AudioDirector.Instance?.SetAdPlayback(true);
+        AdOutcome outcome;
+        try
+        {
+            outcome = await _service.ShowRewardedAsync(placementId);
+        }
+        finally
+        {
+            AudioDirector.Instance?.SetAdPlayback(false);
+        }
 
         // IAdService implementations are NOT required to complete on the main
         // thread: EditorAdService uses Task.Delay (thread-pool continuation) and
@@ -131,6 +144,11 @@ public sealed partial class AdManager : Node
             return;
         }
         if (!_service.TryShowInterstitial(placementId)) return;
+        // Only a real full-screen impression needs the duck; the editor mock
+        // shows nothing, and ducking there would just confuse play-testing.
+        // Released on focus-in (SceneRouter/AdManager resume) or by the
+        // AudioDirector watchdog if the SDK never reports a close.
+        if (OS.GetName() == "Android") AudioDirector.Instance?.SetAdPlayback(true);
         AdPolicy.RecordInterstitial(_state, now);
         PersistCounters();
     }
@@ -140,6 +158,7 @@ public sealed partial class AdManager : Node
         long now = Now();
         if (!AdPolicy.CanShowAppOpen(_state, ConfigService.Instance.AdPolicy, now, out _)) return;
         if (!_service.TryShowAppOpen()) return;
+        if (OS.GetName() == "Android") AudioDirector.Instance?.SetAdPlayback(true);
         AdPolicy.RecordAppOpen(_state, now);
         PersistCounters();
     }

@@ -31,6 +31,15 @@ AdManager="*res://autoload/AdManager.cs"
 RunService="*res://autoload/RunService.cs"
 ProgressionService="*res://autoload/ProgressionService.cs"
 SceneRouter="*res://autoload/SceneRouter.cs"
+; LAST: AudioDirector needs SaveService/ConfigService/AnalyticsService/RunService
+; to be ready, and every other autoload may emit EventBus cues during _Ready().
+AudioDirector="*res://autoload/AudioDirector.cs"
+
+[audio]
+
+; Explicit so every bundled WAV/OGG matches the driver rate (no runtime
+; resampling on Adreno 505-class devices). See AUDIO_DESIGN.md section 9.
+driver/mix_rate=44100
 
 [display]
 

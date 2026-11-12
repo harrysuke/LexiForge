@@ -79,13 +79,16 @@ public sealed partial class ForgeHud : Control
 
         var actions = Ui.MakeRow(12);
         column.AddChild(actions);
-        _hint = Ui.MakeButton("Hint", () => EmitSignal(SignalName.HintRequested), Ui.PanelRaised, 92, 26);
+        // These emit their own semantic cues downstream: hint.reveal on
+        // HintGranted, ui.disabled on a rejected hint, ui.open when the pause
+        // overlay opens. A generic tap here would double every one of them.
+        _hint = Ui.MakeButton("Hint", () => EmitSignal(SignalName.HintRequested), Ui.PanelRaised, 92, 26, null);
         actions.AddChild(_hint);
         _adHint = Ui.MakeButton("Ad: free hint", () => EmitSignal(SignalName.RewardedHintRequested),
-                                Ui.PanelRaised, 92, 24);
+                                Ui.PanelRaised, 92, 24, null);
         _adHint.Visible = false;
         actions.AddChild(_adHint);
-        var pause = Ui.MakeButton("II", () => EmitSignal(SignalName.PauseRequested), Ui.PanelRaised, 92, 28);
+        var pause = Ui.MakeButton("II", () => EmitSignal(SignalName.PauseRequested), Ui.PanelRaised, 92, 28, null);
         pause.CustomMinimumSize = new Vector2(110, 92);
         pause.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         actions.AddChild(pause);

@@ -41,6 +41,18 @@ public sealed class SaveData
     public string ConsentStatus { get; set; } = "unknown";
     public int ConsentPolicyVersion { get; set; } = 1;
 
+    /// <summary>
+    /// Audio settings (design/AUDIO_DESIGN.md section 8). Additive fields: older
+    /// saves simply get the defaults from the tolerant JSON load, so no schema
+    /// bump or migration is required. AudioDirector clamps to 0..1 on read.
+    /// </summary>
+    public float MusicVolume { get; set; } = 0.85f;
+    public float SfxVolume { get; set; } = 1.0f;
+    public float AmbienceVolume { get; set; } = 0.7f;
+    public bool AudioMuted { get; set; }
+    public bool ReducedSoundDensity { get; set; }
+    public bool HapticsEnabled { get; set; } = true;
+
     /// <summary>forgeId -> best star count (1..3).</summary>
     public Dictionary<int, int> StarsByForge { get; set; } = new();
     public List<string> DiscoveredRunes { get; set; } = new();

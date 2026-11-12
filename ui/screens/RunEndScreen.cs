@@ -59,8 +59,8 @@ public sealed partial class RunEndScreen : Control, IScreen
         _status = Ui.MakeLabel("", 26, Ui.Good);
         column.AddChild(_status);
 
-        column.AddChild(Ui.MakeButton("NEW RUN", OnNewRun, Ui.Ember, 120, 38));
-        column.AddChild(Ui.MakeButton("Home", () => SceneRouter.Instance.GoHome(), Ui.PanelRaised, 96, 28));
+        column.AddChild(Ui.MakeButton("NEW RUN", OnNewRun, Ui.Ember, 120, 38, null));
+        column.AddChild(Ui.MakeButton("Home", () => SceneRouter.Instance.GoHome(), Ui.PanelRaised, 96, 28, "ui.back"));
 
         _pause = PauseOverlay.AttachTo(this, "Quit game", () => GetTree().Quit());
     }
@@ -154,7 +154,11 @@ public sealed partial class RunEndScreen : Control, IScreen
         {
             bool granted = await AdManager.Instance.TryRewardedAsync("R_COOL", 0);
             if (granted) Cool();
-            else _status.Text = "Ad unavailable — the coin and Mark options are still free to use.";
+            else
+            {
+                EventBus.Cue("ui.disabled");
+                _status.Text = "Ad unavailable — the coin and Mark options are still free to use.";
+            }
         }
         finally
         {
@@ -168,14 +172,22 @@ public sealed partial class RunEndScreen : Control, IScreen
         if (_cooled) return;
         int cost = ConfigService.Instance.Config.Sinks.CoolForgeCoins;
         if (EconomyService.Instance.TrySpendCoins(cost, "cool_forge")) Cool();
-        else _status.Text = "Not enough coins.";
+        else
+        {
+            EventBus.Cue("ui.disabled");
+            _status.Text = "Not enough coins.";
+        }
     }
 
     private void OnMarkCool()
     {
         if (_cooled) return;
         if (EconomyService.Instance.TrySpendMarks(1, "cool_forge")) Cool();
-        else _status.Text = "No Sponsor Marks left.";
+        else
+        {
+            EventBus.Cue("ui.disabled");
+            _status.Text = "No Sponsor Marks left.";
+        }
     }
 
     private void Cool()
@@ -194,7 +206,8 @@ public sealed partial class RunEndScreen : Control, IScreen
         AdManager.Instance.SetDailyForge(false);
         RunService.Instance.StartRun(seed, false);
         ForgeData? forge = ProgressionService.Instance.ForgeFor(0);
-        if (forge is null) { SceneRouter.Instance.GoHome(); return; }
+        if (forge is null) { EventBus.Cue("ui.disabled"); SceneRouter.Instance.GoHome(); return; }
+        EventBus.Cue("run.start");
         SceneRouter.Instance.GoToForge(forge, 0, RunService.Instance.Effects);
     }
 
