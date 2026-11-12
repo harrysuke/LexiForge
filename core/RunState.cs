@@ -11,6 +11,12 @@ public sealed class RunEndInfo
     public required double FinalHeat { get; init; }
     public required int FreeMarks { get; init; }
     public required IReadOnlyList<string> Runes { get; init; }
+
+    /// <summary>
+    /// Words solved across the whole run. The run-end headline is a COUNT of what
+    /// the player made, not a verdict (UI-53), and it must end on a gain.
+    /// </summary>
+    public int WordsForged { get; init; }
 }
 
 /// <summary>
@@ -144,6 +150,7 @@ public sealed class RunState
         Forges = ForgesInRun,
         FinalHeat = Heat,
         FreeMarks = Effects.FreeMarksAtRunEnd,
-        Runes = _owned.Select(r => r.Id).ToArray()
+        Runes = _owned.Select(r => r.Id).ToArray(),
+        WordsForged = _forges.Sum(f => f.SolutionWords)
     };
 }

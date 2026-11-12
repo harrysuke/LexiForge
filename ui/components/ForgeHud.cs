@@ -1,4 +1,3 @@
-using System;
 using Godot;
 using LexiForge.Autoload;
 using LexiForge.Core;
@@ -6,155 +5,157 @@ using LexiForge.Core;
 namespace LexiForge.UI;
 
 /// <summary>
-/// Forge-level HUD: Flow, Bonus Jar, slot progress, run Heat, wallet and the
-/// hint / pause affordances. It never mutates state — ForgeScreen owns the
-/// ForgeSession and calls Refresh()/Toast(). Signals keep the HUD reusable in
-/// the editor without any knowledge of the screen that hosts it.
+/// The Read band: Heat, wallet, Flow, Bonus Jar and slot progress. Read-only by
+/// contract (UI_VISUAL_SYSTEM section 5.1) - the only interactive things here are
+/// the pause control and the Heat bar's tap-to-peek.
 ///
-/// The toast is a single pooled Label whose colour/text are rewritten, never a
-/// spawned node per word (GDD 11.5).
+/// Attention order this layout encodes (UI_DESIGN section 4.2):
+///   empty slots (in the grid) > rack > Flow > Heat > chrome.
+/// Everything in this band is therefore quiet by default: Heat is a 10 dp strip
+/// with no number, the wallet is low contrast, and the theme line is 20 sp Muted.
+///
+/// It never mutates state: ForgeScreen owns the session and calls Refresh().
 /// </summary>
 public sealed partial class ForgeHud : Control
 {
-    [Signal] public delegate void HintRequestedEventHandler();
-    [Signal] public delegate void RewardedHintRequestedEventHandler();
     [Signal] public delegate void PauseRequestedEventHandler();
 
-    private Label _flow = null!;
+    private HeatBar _heatBar = null!;
+    private FlowMeter _flow = null!;
+    private BonusJar _jar = null!;
+    private Label _theme = null!;
     private Label _slots = null!;
-    private Label _bonus = null!;
     private Label _wallet = null!;
-    private Label _heat = null!;
-    private Label _toast = null!;
-    private ProgressBar _bar = null!;
-    private Button _hint = null!;
-    private Button _adHint = null!;
-    private double _toastRemaining;
+    private Button _pause = null!;
+    private int _lastFound = -1;
+    private int _lastBonus = -1;
+
+    public BonusJar Jar => _jar;
 
     public override void _Ready()
     {
-        var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 10);
-        AddChild(column);
-        Ui.FullRect(column);
+        MouseFilter = MouseFilterEnum.Ignore;
 
-        var top = Ui.MakeRow(12);
+        _heatBar = new HeatBar();
+        AddChild(_heatBar);
+        _heatBar.SetAnchorsPreset(LayoutPreset.TopWide);
+        _heatBar.OffsetLeft = 0;
+        _heatBar.OffsetRight = 0;
+        _heatBar.OffsetTop = 0;
+        _heatBar.OffsetBottom = Tok.Dp(10f);
+
+        var frame = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore };
+        frame.AddThemeConstantOverride("margin_left", Tok.I(Tok.MarginDp));
+        frame.AddThemeConstantOverride("margin_right", Tok.I(Tok.MarginDp));
+        frame.AddThemeConstantOverride("margin_top", Tok.I(12f));
+        frame.AddThemeConstantOverride("margin_bottom", Tok.I(4f));
+        AddChild(frame);
+        Ui.FullRect(frame);
+        frame.OffsetTop = Tok.Dp(10f);
+
+        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        column.AddThemeConstantOverride("separation", Tok.I(6f));
+        frame.AddChild(column);
+
+        // Row 1: pause (the quietest thing on screen) · theme · wallet.
+        var top = Ui.MakeRow(8f);
         column.AddChild(top);
 
-        _flow = Ui.MakeLabel("FLOW 1.00x", 30, Ui.Gold, HorizontalAlignment.Left);
-        _flow.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        top.AddChild(_flow);
+        _pause = Ui.MakeButton("", () => EmitSignal(SignalName.PauseRequested), BtnKind.Icon, 44f, 20f, null);
+        _pause.CustomMinimumSize = new Vector2(Tok.Dp(44f), Tok.Dp(44f));
+        _pause.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _pause.Modulate = new Color(1, 1, 1, 0.6f);
+        _pause.AddChild(Fill(IconGlyph.Create(Glyph.Pause, 16f, Tok.Muted, 2f)));
+        top.AddChild(_pause);
 
-        _wallet = Ui.MakeLabel("0", 28, Ui.Text, HorizontalAlignment.Right);
-        top.AddChild(_wallet);
+        // UI-07: theme at 20 sp Muted, and DI is gone - it is an internal
+        // difficulty index, not a player concept.
+        _theme = Ui.MakeLabel("", 20f, Tok.Muted, HorizontalAlignment.Left);
+        _theme.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _theme.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        top.AddChild(_theme);
 
-        var meters = Ui.MakeRow(14);
+        var walletRow = Ui.MakeRow(4f);
+        walletRow.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        walletRow.AddChild(IconGlyph.Create(Glyph.Coin, 14f, Tok.Gold, 1.6f));
+        _wallet = Ui.MakeLabel("0", 22f, Tok.Text, HorizontalAlignment.Right);
+        walletRow.AddChild(_wallet);
+        top.AddChild(walletRow);
+
+        // Row 2: Flow (the E1 feedback) and the jar (the E3 carrier).
+        var meters = Ui.MakeRow(10f);
         column.AddChild(meters);
 
-        _heat = Ui.MakeLabel("HEAT 0", 24, Ui.Muted, HorizontalAlignment.Left);
-        _heat.CustomMinimumSize = new Vector2(190, 0);
-        meters.AddChild(_heat);
+        _flow = new FlowMeter { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        meters.AddChild(_flow);
 
-        _bar = new ProgressBar
-        {
-            MinValue = 0,
-            MaxValue = 100,
-            Value = 0,
-            ShowPercentage = false,
-            CustomMinimumSize = new Vector2(0, 26),
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            SizeFlagsVertical = SizeFlags.ShrinkCenter
-        };
-        _bar.AddThemeStyleboxOverride("background", Flat(Ui.Locked));
-        _bar.AddThemeStyleboxOverride("fill", Flat(Ui.Ember));
-        meters.AddChild(_bar);
+        _jar = new BonusJar { SizeFlagsHorizontal = SizeFlags.ShrinkEnd, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        meters.AddChild(_jar);
 
-        var stats = Ui.MakeRow(14);
-        column.AddChild(stats);
-        _slots = Ui.MakeLabel("0 / 0 words", 26, Ui.Muted, HorizontalAlignment.Left);
+        // Row 3: the gap, quantified.
+        var progress = Ui.MakeRow(8f);
+        column.AddChild(progress);
+        _slots = Ui.MakeLabel("", 24f, Tok.Muted, HorizontalAlignment.Left);
         _slots.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        stats.AddChild(_slots);
-        _bonus = Ui.MakeLabel("BONUS 0 / 8", 26, Ui.Muted, HorizontalAlignment.Right);
-        stats.AddChild(_bonus);
-
-        var actions = Ui.MakeRow(12);
-        column.AddChild(actions);
-        // These emit their own semantic cues downstream: hint.reveal on
-        // HintGranted, ui.disabled on a rejected hint, ui.open when the pause
-        // overlay opens. A generic tap here would double every one of them.
-        _hint = Ui.MakeButton("Hint", () => EmitSignal(SignalName.HintRequested), Ui.PanelRaised, 92, 26, null);
-        actions.AddChild(_hint);
-        _adHint = Ui.MakeButton("Ad: free hint", () => EmitSignal(SignalName.RewardedHintRequested),
-                                Ui.PanelRaised, 92, 24, null);
-        _adHint.Visible = false;
-        actions.AddChild(_adHint);
-        var pause = Ui.MakeButton("II", () => EmitSignal(SignalName.PauseRequested), Ui.PanelRaised, 92, 28, null);
-        pause.CustomMinimumSize = new Vector2(110, 92);
-        pause.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        actions.AddChild(pause);
-
-        _toast = Ui.MakeLabel("", 30, Ui.Text);
-        _toast.CustomMinimumSize = new Vector2(0, 56);
-        _toast.Modulate = new Color(1, 1, 1, 0);
-        column.AddChild(_toast);
+        progress.AddChild(_slots);
     }
 
-    private static StyleBoxFlat Flat(Color color)
+    private static Control Fill(Control child)
     {
-        var box = new StyleBoxFlat { BgColor = color };
-        box.SetCornerRadiusAll(10);
-        return box;
+        var centre = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        centre.SetAnchorsPreset(LayoutPreset.FullRect);
+        centre.AddChild(child);
+        return centre;
     }
 
-    public void ResetFor(ForgeSession session) => Refresh(session);
+    public void ResetFor(ForgeSession session)
+    {
+        _lastFound = -1;
+        _lastBonus = -1;
+        _heatBar.SetHeat(RunService.Instance.Heat, RunService.Instance.RunScore, false);
+        Refresh(session);
+    }
 
     public void Refresh(ForgeSession session)
     {
         var cfg = ConfigService.Instance.Config;
-        _flow.Text = $"FLOW {session.Flow:0.00}x   {session.ElapsedSeconds:0}s";
-        _flow.AddThemeColorOverride("font_color", session.Flow > 1.001 ? Ui.Gold : Ui.Text);
+        int found = session.FoundSolutions.Count;
+        int total = session.SolutionWordCount;
+        int remaining = Mathf.Max(0, total - found);
 
-        double heat = RunService.Instance.Heat;
-        _heat.Text = $"HEAT {heat:0}";
-        _bar.Value = heat;
+        _theme.Text = session.Forge.Theme;
+        _wallet.Text = EconomyService.Instance.Coins.ToString("N0");
+        _flow.SetFlow(session.Flow, _lastFound >= 0);
+        _jar.SetFill(session.BonusJar.Count, cfg.Economy.BonusWordCap, _lastBonus >= 0);
 
-        _slots.Text = $"{session.FoundSolutions.Count} / {session.SolutionWordCount} words";
-        _bonus.Text = $"BONUS {session.BonusJar.Count} / {cfg.Economy.BonusWordCap}";
-        _wallet.Text = $"{EconomyService.Instance.Coins} coins";
-
-        int cost = EconomyModel.HintCost(session.HintsUsed + 1, cfg.Economy);
-        bool exhausted = session.HintsUsed >= cfg.Economy.MaxHintsPerForge;
-        _hint.Text = session.FreeHintsRemaining > 0 ? "Free hint" : $"Hint ({cost})";
-        _hint.Disabled = exhausted || (session.FreeHintsRemaining == 0 && EconomyService.Instance.Coins < cost);
-
-        // Rewarded entry points are visible but never pushed as a popup (GDD 3.5).
-        bool firstSessionUnlocked = SaveService.Instance.Data.LifetimeForges + 1
-                                    >= cfg.Progression.FirstSession.RewardedEntryPointsVisibleFromForge;
-        _adHint.Visible = firstSessionUnlocked && !exhausted &&
-                          AdManager.Instance.CanOfferRewarded("R_HINT", out _);
-    }
-
-    public void Toast(string text, Color color)
-    {
-        _toast.Text = text;
-        _toast.AddThemeColorOverride("font_color", color);
-        _toast.Modulate = Colors.White;
-        _toastRemaining = 1.6;
-    }
-
-    public override void _Process(double delta)
-    {
-        if (_toastRemaining <= 0) return;
-        _toastRemaining -= delta;
-        if (_toastRemaining > 0)
+        // UI-29: goal-gradient. The counter turns Gold only at <=2 remaining, and
+        // only then gains the suffix - doing this at 5 remaining is nagging.
+        if (remaining <= 2 && remaining > 0)
         {
-            // Hold full opacity, then fade over the last 0.5 s.
-            float alpha = _toastRemaining < 0.5 ? (float)(_toastRemaining / 0.5) : 1f;
-            _toast.Modulate = new Color(1, 1, 1, alpha);
+            _slots.Text = $"{found} / {total} words  —  {remaining} word{(remaining == 1 ? "" : "s")} left";
+            _slots.AddThemeColorOverride("font_color", Tok.Gold);
         }
         else
         {
-            _toast.Modulate = new Color(1, 1, 1, 0);
+            _slots.Text = $"{found} / {total} words";
+            _slots.AddThemeColorOverride("font_color", Tok.Muted);
         }
+
+        // UI-61: no HUD element until it has something to say. A tutorial player
+        // does not see an empty jar or an empty Flow bar on forge 1.
+        bool firstRun = RunService.Instance.IsFirstRunEver;
+        _jar.Visible = !firstRun || session.BonusJar.Count > 0;
+        _flow.Visible = !firstRun || session.CleanStreak > 0;
+
+        _lastFound = found;
+        _lastBonus = session.BonusJar.Count;
     }
+
+    public void SetHeat(double heat, int score, bool animate)
+        => _heatBar.SetHeat(heat, score, animate);
+
+    /// <summary>A coin arcs from the cell the player just filled into the jar.</summary>
+    public void CoinIntoJar(Vector2 globalFrom) => _jar.FlyCoinFrom(globalFrom);
+
+    public void BurstJar() => _jar.Burst();
 }

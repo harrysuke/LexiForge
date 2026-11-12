@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LexiForge")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1570ca51916ab88a62d07eee8a88ecbe9ebcead8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f00a86a5f7cd14e47c52a8f110e430f767dd4da4")]
 [assembly: System.Reflection.AssemblyProductAttribute("LexiForge")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LexiForge")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

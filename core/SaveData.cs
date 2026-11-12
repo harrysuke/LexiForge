@@ -53,6 +53,13 @@ public sealed class SaveData
     public bool ReducedSoundDensity { get; set; }
     public bool HapticsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// UI settings (UI_DESIGN UI-15 / UI-18). Additive fields: older saves get the
+    /// defaults from the tolerant JSON load, so no schema bump is required.
+    /// </summary>
+    public bool RemoveAnimations { get; set; }
+    public bool DyslexiaFont { get; set; }
+
     /// <summary>forgeId -> best star count (1..3).</summary>
     public Dictionary<int, int> StarsByForge { get; set; } = new();
     public List<string> DiscoveredRunes { get; set; } = new();

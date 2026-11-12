@@ -21,30 +21,33 @@ public sealed partial class Boot : Control
 
     public override void _Ready()
     {
-        var background = new ColorRect { Color = Ui.Bg, MouseFilter = MouseFilterEnum.Ignore };
+        Tok.Setup(GetViewportRect().Size.X);
+
+        var background = new ColorRect { Color = Tok.BgBase, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(background);
         Ui.FullRect(background);
 
         var frame = new MarginContainer();
-        frame.AddThemeConstantOverride("margin_left", 80);
-        frame.AddThemeConstantOverride("margin_right", 80);
-        frame.AddThemeConstantOverride("margin_top", 160);
-        frame.AddThemeConstantOverride("margin_bottom", 160);
+        frame.AddThemeConstantOverride("margin_left", Tok.I(Tok.MarginDp));
+        frame.AddThemeConstantOverride("margin_right", Tok.I(Tok.MarginDp));
+        frame.AddThemeConstantOverride("margin_top", Tok.I(64f));
+        frame.AddThemeConstantOverride("margin_bottom", Tok.I(64f));
         AddChild(frame);
         Ui.FullRect(frame);
         _splash = frame;
 
         var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 36);
+        column.AddThemeConstantOverride("separation", Tok.I(12f));
         frame.AddChild(column);
 
-        column.AddChild(Ui.MakeLabel("LEXIFORGE", 86, Ui.Gold));
-        column.AddChild(Ui.MakeLabel("Heat the iron. Keep the Flow.", 30, Ui.Muted));
-        _status = Ui.MakeLabel("Loading word forge...", 30, Ui.Text);
+        column.AddChild(Ui.Display(Ui.MakeLabel("LEXIFORGE", 34f, Tok.Text, HorizontalAlignment.Left), this));
+        column.AddChild(Ui.MakeLabel("Heat the iron. Keep the Flow.", 22f, Tok.Muted, HorizontalAlignment.Left));
+        _status = Ui.MakeLabel("Loading word forge…", 22f, Tok.Text, HorizontalAlignment.Left);
         column.AddChild(_status);
 
-        _retry = Ui.MakeButton("Retry load", OnRetry, Ui.Ember, 104, 30);
+        _retry = Ui.MakeButton("Retry load", OnRetry, BtnKind.Secondary, 56f, 22f);
         _retry.Visible = false;
+        _retry.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         column.AddChild(_retry);
 
         EventBus.Instance.DataReady += OnDataReady;

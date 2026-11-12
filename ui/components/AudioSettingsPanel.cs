@@ -52,7 +52,7 @@ public sealed partial class AudioSettingsPanel : Control
         MouseFilter = MouseFilterEnum.Stop;
         Ui.FullRect(this);
 
-        var dim = new ColorRect { Color = new Color(0.02f, 0.015f, 0.01f, 0.92f) };
+        var dim = new ColorRect { Color = Tok.A(Tok.BgVoid, 0.92f) };
         AddChild(dim);
         Ui.FullRect(dim);
 
@@ -60,16 +60,19 @@ public sealed partial class AudioSettingsPanel : Control
         AddChild(centre);
         Ui.FullRect(centre);
 
-        var card = Ui.MakePanel(Ui.Panel, 28);
-        card.CustomMinimumSize = new Vector2(860, 0);
+        var card = Ui.MakePanel(Tok.Surf1, Tok.RadiusCardDp);
+        card.CustomMinimumSize = new Vector2(Tok.Dp(320f), 0);
         centre.AddChild(card);
 
         var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 18);
+        column.AddThemeConstantOverride("separation", Tok.I(10f));
         card.AddChild(column);
 
-        column.AddChild(Ui.MakeLabel("SOUND", 46, Ui.Gold));
-        column.AddChild(Ui.MakeLabel("All optional — the game is fully playable muted.", 24, Ui.Muted));
+        column.AddChild(Ui.MakeLabel("SOUND", 24f, Tok.Text, HorizontalAlignment.Left));
+        // Deliberately NOT autowrapped: a wrapped Label reports a minimum height
+        // measured at width 0, which made this card 10538 px tall and pushed it off
+        // the screen. Keep every line inside the 320 dp card instead.
+        column.AddChild(Ui.MakeLabel("All optional — playable muted.", 20f, Tok.Muted, HorizontalAlignment.Left));
 
         _music = AddSlider(column, "Music", out _musicValue);
         _sfx = AddSlider(column, "Effects", out _sfxValue);
@@ -79,11 +82,7 @@ public sealed partial class AudioSettingsPanel : Control
         _reduced = AddToggle(column, "Reduce sound density");
         _haptics = AddToggle(column, "Haptics (Android)");
 
-        column.AddChild(Ui.MakeLabel(
-            "Reduced density drops ambience and decorative cues, keeps every gameplay cue.",
-            22, Ui.Muted));
-
-        column.AddChild(Ui.MakeButton("Done", Close, Ui.Ember, 104, 32, null));
+        column.AddChild(Ui.MakeButton("Done", Close, BtnKind.Primary, 56f, 22f, null));
 
         // Sliders: preview while dragging, persist when the finger lifts.
         _music.ValueChanged += _ => OnSliderMoved();
@@ -183,11 +182,11 @@ public sealed partial class AudioSettingsPanel : Control
 
     private static HSlider AddSlider(VBoxContainer parent, string label, out Label valueLabel)
     {
-        var row = Ui.MakeRow(16);
+        var row = Ui.MakeRow(10f);
         parent.AddChild(row);
 
-        Label name = Ui.MakeLabel(label, 28, Ui.Text, HorizontalAlignment.Left);
-        name.CustomMinimumSize = new Vector2(200, 0);
+        Label name = Ui.MakeLabel(label, 20f, Tok.Text, HorizontalAlignment.Left);
+        name.CustomMinimumSize = new Vector2(Tok.Dp(78f), 0);
         row.AddChild(name);
 
         var slider = new HSlider
@@ -196,21 +195,21 @@ public sealed partial class AudioSettingsPanel : Control
             MaxValue = 100,
             Step = 1,
             Value = 100,
-            CustomMinimumSize = new Vector2(0, 48),
+            CustomMinimumSize = new Vector2(0, Tok.Dp(36f)),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ShrinkCenter
         };
         row.AddChild(slider);
 
-        valueLabel = Ui.MakeLabel("100%", 26, Ui.Muted, HorizontalAlignment.Right);
-        valueLabel.CustomMinimumSize = new Vector2(100, 0);
+        valueLabel = Ui.MakeLabel("100%", 20f, Tok.Muted, HorizontalAlignment.Right);
+        valueLabel.CustomMinimumSize = new Vector2(Tok.Dp(40f), 0);
         row.AddChild(valueLabel);
         return slider;
     }
 
     private static CheckButton AddToggle(VBoxContainer parent, string label)
     {
-        var row = Ui.MakeRow(16);
+        var row = Ui.MakeRow(10f);
         parent.AddChild(row);
 
         var button = new CheckButton
@@ -220,9 +219,9 @@ public sealed partial class AudioSettingsPanel : Control
             FocusMode = Control.FocusModeEnum.None,
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        button.AddThemeFontSizeOverride("font_size", 28);
-        button.AddThemeColorOverride("font_color", Ui.Text);
-        button.AddThemeColorOverride("font_pressed_color", Ui.Gold);
+        button.AddThemeFontSizeOverride("font_size", Tok.I(20f));
+        button.AddThemeColorOverride("font_color", Tok.Text);
+        button.AddThemeColorOverride("font_pressed_color", Tok.Gold);
         row.AddChild(button);
         return button;
     }

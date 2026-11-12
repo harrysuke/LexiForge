@@ -47,6 +47,8 @@ public sealed class ForgeOutcome
     public required int CoolStrikes { get; init; }
     public required IReadOnlyList<string> BonusWords { get; init; }
     public int ForgeId { get; init; }
+    /// <summary>Solution words in this forge. Used by the run-end headline ("14 words forged").</summary>
+    public int SolutionWords { get; init; }
     public double SolveSeconds => Result.SolveSeconds;
     public double ParSeconds => Result.ParSeconds;
     public bool Perfect => Result.Perfect;
@@ -401,7 +403,8 @@ public sealed class ForgeSession
             TotalCoins = total,
             CoolStrikes = CountCoolStrikes(),
             BonusWords = _bonusJar.ToArray(),
-            ForgeId = _forge.ForgeId
+            ForgeId = _forge.ForgeId,
+            SolutionWords = _solutions.Count
         };
     }
 

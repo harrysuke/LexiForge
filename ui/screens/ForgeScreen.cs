@@ -7,75 +7,162 @@ namespace LexiForge.UI;
 
 /// <summary>
 /// The playable forge. This scene is instantiated ONCE and pooled by
-/// SceneRouter.GoToForge — ResetFor rebinds the pure-C# ForgeSession to the
+/// SceneRouter.GoToForge - ResetFor rebinds the pure-C# ForgeSession to the
 /// existing HUD / grid / rack / overlay nodes (GDD 11.5 forbids reloading it).
+///
+/// Layout is the three-band model from UI_VISUAL_SYSTEM section 5.1, resolved
+/// against the real viewport instead of a fixed 800 dp assumption:
+///
+///   Read   (top)     Heat bar, wallet, Flow, jar, slot progress  - read only
+///   Solve  (middle)  the crossword                               - absorbs variance
+///   Act    (bottom)  compose strip, rack, action row             - thumb reach
+///
+/// The Read band anchors top and the Act band anchors bottom, so every dp of
+/// height variance lands in the Solve band. A layout that only works at 800 dp is
+/// a layout that breaks on the cheapest device in the target set (D-01).
 ///
 /// Ownership: this view is the ONLY place Godot input, signals and async ad
 /// callbacks are translated into ForgeSession calls. All rules (Flow, keystone
 /// gating, hints, nudges, coin maths, stars) live in core/ and are unit-tested.
-/// No game formula is repeated here.
 /// </summary>
 public sealed partial class ForgeScreen : Control, IForgeScreen
 {
     private const double UiRefreshSeconds = 0.25;
 
+    private Control _stage = null!;
     private ForgeHud _hud = null!;
     private WordGrid _grid = null!;
     private LetterRack _rack = null!;
+    private Toast _toast = null!;
     private ResultsCard _results = null!;
+    private HintSheet _hints = null!;
     private PauseOverlay _pause = null!;
-    private Label _theme = null!;
 
     private ForgeSession? _session;
     private ForgeData? _forge;
     private ForgeOutcome? _outcome;
     private RunEndInfo? _runEnd;
+    private Layout _layout = Layout.For(1920f, 1080f);
     private int _runIndex;
     private double _heatBefore;
     private double _uiAccumulator;
     private bool _adBusy;
     private bool _doubled;
+    private bool _revealOffered;
+    private bool _firstPickRecorded;
+    private ulong _forgeOpenedMs;
+    private int _lastBonusCount;
+    private bool _jarBurstDone;
 
     public override void _Ready()
     {
-        var background = new ColorRect { Color = Ui.Bg, MouseFilter = MouseFilterEnum.Ignore };
+        Tok.Setup(GetViewportRect().Size.X);
+
+        var background = new ColorRect { Color = Tok.BgBase, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(background);
         Ui.FullRect(background);
 
-        var column = Ui.AttachColumn(this, 18, 48);
+        // The stage exists so the keystone pulse can scale the whole screen
+        // without disturbing the pause sheet or the ad frame.
+        _stage = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_stage);
+        Ui.FullRect(_stage);
 
-        _hud = new ForgeHud { CustomMinimumSize = new Vector2(0, 330) };
-        _hud.SizeFlagsVertical = SizeFlags.ShrinkBegin;
-        column.AddChild(_hud);
+        _hud = new ForgeHud { MouseFilter = MouseFilterEnum.Ignore };
+        _stage.AddChild(_hud);
 
-        _theme = Ui.MakeLabel("", 30, Ui.Gold);
-        column.AddChild(_theme);
+        _grid = new WordGrid();
+        _stage.AddChild(_grid);
 
-        _grid = new WordGrid { SizeFlagsVertical = SizeFlags.ExpandFill };
-        column.AddChild(_grid);
+        _rack = new LetterRack();
+        _stage.AddChild(_rack);
 
-        _rack = new LetterRack { CustomMinimumSize = new Vector2(0, 420) };
-        _rack.SizeFlagsVertical = SizeFlags.ShrinkEnd;
-        column.AddChild(_rack);
+        _toast = new Toast();
+        _stage.AddChild(_toast);
 
         _results = new ResultsCard();
-        AddChild(_results);
+        _stage.AddChild(_results);
         Ui.FullRect(_results);
 
-        _pause = PauseOverlay.AttachTo(this, "Leave run", LeaveRun);
+        _hints = new HintSheet();
+        _stage.AddChild(_hints);
+        Ui.FullRect(_hints);
+
+        _pause = PauseOverlay.AttachTo(this, "Leave run — this forge starts over", LeaveRun,
+                                       () => SceneRouter.Instance.GoHome());
 
         _rack.WordSubmitted += OnWordSubmitted;
         _rack.ShuffleRequested += () => AnalyticsService.Instance.Record("shuffle");
-        _hud.HintRequested += () => ApplyHint(HintSource.Coin);
-        _hud.RewardedHintRequested += OnRewardedHint;
+        _rack.HintRequested += OpenHintSheet;
+        _rack.TilePicked += OnTilePicked;
         _hud.PauseRequested += () => _pause.Toggle();
+        _hints.CoinRequested += OnCoinHint;
+        _hints.AdRequested += OnRewardedHint;
         _results.ContinueRequested += ContinueAfterResults;
         _results.DoubleHaulRequested += OnDoubleHaul;
+        _results.JarBurstRequested += OnJarBurst;
+
+        Resized += LayoutBands;
+        LayoutBands();
+
+        // D-02: the banner reserve exists in the layout and is asserted, even
+        // though v1 ships it disabled.
+        if (OS.IsDebugBuild()) AdSafeFrame.AssertClear(this);
+    }
+
+    /// <summary>
+    /// Reserves the three bands from the real viewport. Called on _Ready, on
+    /// resize, and on every ResetFor (the bank size decides the Act band height).
+    /// </summary>
+    private void LayoutBands()
+    {
+        if (_hud is null) return;
+
+        float width = Size.X > 1 ? Size.X : GetViewportRect().Size.X;
+        float height = Size.Y > 1 ? Size.Y : GetViewportRect().Size.Y;
+        if (width < 1 || height < 1) return;
+
+        _layout = Layout.For(height, width);
+
+        float hudHeight = Tok.Dp(156f);
+        int tiles = _session?.Forge.LetterBank.Length + _session?.Effects.WildTiles ?? 4;
+        float rackWidthDp = (width - Tok.Dp(Tok.MarginDp) * 2f) / Tok.Scale;
+        float rackHeight = Tok.Dp(LetterRack.RequiredHeightDp(_layout, tiles, rackWidthDp));
+
+        // Read band: anchored to the top, never compressed below 148 dp. 156 dp
+        // gives the three HUD rows their measured minimum plus the 10 dp heat bar.
+        _hud.SetAnchorsPreset(LayoutPreset.TopWide);
+        _hud.OffsetLeft = 0;
+        _hud.OffsetRight = 0;
+        _hud.OffsetTop = 0;
+        _hud.OffsetBottom = hudHeight;
+
+        // Act band: anchored to the bottom, never compressed below 264 dp.
+        _rack.SetAnchorsPreset(LayoutPreset.BottomWide);
+        _rack.OffsetLeft = Tok.Dp(Tok.MarginDp);
+        _rack.OffsetRight = -Tok.Dp(Tok.MarginDp);
+        _rack.OffsetTop = -rackHeight;
+        _rack.OffsetBottom = 0;
+
+        // Solve band: everything left over.
+        _grid.SetAnchorsPreset(LayoutPreset.FullRect);
+        _grid.OffsetLeft = Tok.Dp(Tok.MarginDp);
+        _grid.OffsetRight = -Tok.Dp(Tok.MarginDp);
+        _grid.OffsetTop = hudHeight;
+        _grid.OffsetBottom = -rackHeight;
+
+        _grid.ApplyLayout(_layout);
+        _rack.ApplyLayout(_layout);
+
+        // The toast lives in the empty gutter directly above the rack. Anchoring it
+        // to a fixed 180 dp put it on top of the first grid row at Compact height.
+        _toast.PlaceAbove(rackHeight);
     }
 
     public void OnEnter(object? payload)
     {
         _pause.Close();
+        _hints.Close();
         // A drag-submit can complete the forge, at which point _Process stops
         // updating InputBusy. Clear it so the results card's opt-in ad is not
         // silently rejected as "input busy".
@@ -86,6 +173,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     public void OnExit()
     {
         _pause.Close();
+        _hints.Close();
         AdManager.Instance.InputBusy = false;
     }
 
@@ -94,6 +182,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         // Never pause on top of the results card: the player must be able to
         // collect their reward and continue.
         if (_results.IsOpen) return;
+        if (_hints.IsOpen) { _hints.Close(); return; }
         _pause.Toggle();
     }
 
@@ -105,8 +194,13 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         _outcome = null;
         _runEnd = null;
         _doubled = false;
+        _revealOffered = false;
+        _firstPickRecorded = false;
+        _jarBurstDone = false;
+        _lastBonusCount = 0;
         _uiAccumulator = 0;
         _heatBefore = RunService.Instance.Heat;
+        _forgeOpenedMs = Time.GetTicksMsec();
 
         _session = new ForgeSession(forge, GameDataService.Instance.Dictionary,
                                     ConfigService.Instance.Config, effects);
@@ -122,9 +216,12 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         _grid.ResetFor(_session);
         _hud.ResetFor(_session);
         _rack.ResetFor(_session, unchecked(forge.Seed ^ (runIndex * 7919)));
-        _theme.Text = $"Forge {forge.ForgeId}  ·  {forge.Theme}  ·  DI {forge.DifficultyIndex:0}";
         _results.Close();
         _pause.Close();
+        _hints.Close();
+
+        UpdateHintBadge();
+        LayoutBands();
 
         EventBus.Instance.EmitSignal(EventBus.SignalName.ForgeStarted, forge.ForgeId, runIndex);
         AnalyticsService.Instance.Record("forge_start", forge.ForgeId.ToString(), runIndex.ToString());
@@ -138,33 +235,50 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         // Ads must never be loaded mid-gesture (GDD 11.5).
         AdManager.Instance.InputBusy = _rack.IsDragging;
 
-        // Throttled: HUD text formatting and FindHintTarget allocate strings, so
-        // they must not run 60 times per second on a low-end Android device.
+        // Throttled: HUD text formatting allocates strings, so it must not run 60
+        // times per second on a low-end Android device.
         _uiAccumulator += delta;
         if (_uiAccumulator < UiRefreshSeconds) return;
         _uiAccumulator = 0;
 
-        if (_session.ConsecutiveWrongAttemptsReached &&
-            _session.TryGrantStruggleReveal(out char struggleLetter, out int struggleSlot, out _))
+        // UI-37: three wrong attempts in a row offer a free reveal as a soft
+        // button under the rack - no modal, no confirm, no cost.
+        if (_session.ConsecutiveWrongAttemptsReached && !_revealOffered)
         {
-            _hud.Toast($"Free letter: {char.ToUpperInvariant(struggleLetter)} — keep going!", Ui.Good);
-            EventBus.Cue("nudge.reveal");
-            AnalyticsService.Instance.Record("struggle_reveal", struggleSlot.ToString());
+            _revealOffered = true;
+            _rack.ShowRevealOffer(OnRevealOffer);
         }
-        else if (_session.TryGetNudge(out char letter, out int slot, out _))
+
+        // UI-36: the 45 s nudge is framed as the player's own perception. The
+        // letter breathes in place on the rack; there is no toast and the word
+        // "free" never appears.
+        if (_session.TryGetNudge(out char letter, out int slot, out _))
         {
-            _hud.Toast($"Free nudge: {char.ToUpperInvariant(letter)}", Ui.Good);
+            _rack.HighlightLetter(letter);
             EventBus.Cue("nudge.reveal");
-            AnalyticsService.Instance.Record("nudge", slot.ToString());
+            AnalyticsService.Instance.Record("nudge_shown",
+                ((int)_session.ElapsedSeconds).ToString(), slot.ToString());
         }
 
         _grid.Refresh();
         _hud.Refresh(_session);
     }
 
+    private void OnTilePicked(int index)
+    {
+        if (_firstPickRecorded) return;
+        _firstPickRecorded = true;
+        // The one number that measures friction at session start (section 10).
+        long elapsed = (long)(Time.GetTicksMsec() - _forgeOpenedMs);
+        AnalyticsService.Instance.Record("ui_first_interactive", elapsed.ToString());
+    }
+
+    // -------------------------------------------------------------- submission
     private void OnWordSubmitted(string word)
     {
         if (_session is null || _results.IsOpen) { _rack.ClearSelection(); return; }
+
+        Vector2? origin = _rack.SelectionCenterGlobal();
 
         // Pre-submit Flow decides whether a penalty actually broke a streak.
         int flowBefore = (int)Math.Round(_session.Flow * 100);
@@ -175,24 +289,41 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
         if (submission.IsSuccess)
         {
+            _rack.ClearNudge();
             EmitWordCue(submission);
-            string message = submission.Kind == WordSubmissionKind.SolutionWord
-                ? $"FORGED {submission.Word.ToUpperInvariant()}  ·  Flow {submission.Flow:0.00}x"
-                : $"+{ConfigService.Instance.Config.Economy.PerBonusWord} coins  ·  Bonus Jar";
-            _hud.Toast(message, Ui.Good);
+            if (submission.Kind == WordSubmissionKind.SolutionWord)
+            {
+                _toast.Show($"FORGED {submission.Word.ToUpperInvariant()}", Tok.Jade);
+            }
+            else
+            {
+                // E3: the coin arcs INTO the jar from the word the player built.
+                _lastBonusCount = submission.BonusWords;
+                _hud.CoinIntoJar(origin ?? _grid.GetGlobalRect().GetCenter());
+                _toast.Show($"+{ConfigService.Instance.Config.Economy.PerBonusWord} coins  ·  Bonus Jar", Tok.Gold);
+                AnalyticsService.Instance.Record("jar_fill", submission.BonusWords.ToString());
+                if (!_jarBurstDone && submission.BonusWords >= ConfigService.Instance.Config.Economy.BonusWordCap)
+                {
+                    _jarBurstDone = true;
+                    OnJarBurst();
+                }
+            }
+
             EventBus.Instance.EmitSignal(EventBus.SignalName.WordAccepted,
                 submission.Word, (int)Math.Round(submission.Flow * 100), submission.BonusWords);
             AnalyticsService.Instance.Record("word_ok", submission.Kind.ToString(), submission.Word);
+
+            if (_forge is not null &&
+                string.Equals(submission.Word, _forge.KeystoneWord, StringComparison.OrdinalIgnoreCase))
+                PlayKeystone();
         }
         else
         {
-            // Neutral by design: the catalogue keeps word.reject the quietest
-            // negative cue in the game (GDD 3.1 - a wrong word is never a loss).
-            EventBus.Cue("word.reject");
+            // UI-P2: rejection is information, not punishment. The rack wobbles
+            // 6 dp, the strip turns Rust, one quiet dot. No screen shake.
+            _rack.Reject();
             if (submission.IsPenalty && flowBefore > 115) EventBus.Cue("flow.break");
-
-            string reason = ReasonFor(submission.Kind);
-            _hud.Toast(reason, Ui.Bad);
+            _toast.Show(ReasonFor(submission.Kind), Tok.RustText);
             if (submission.IsPenalty)
             {
                 EventBus.Instance.EmitSignal(EventBus.SignalName.WordRejected, submission.Kind.ToString());
@@ -206,8 +337,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     /// <summary>
     /// Kind-specific word feedback. AudioEventBridge deliberately cannot do this:
     /// WordAccepted does not say solution vs bonus vs keystone, so the view that
-    /// owns the submission emits the precise cue (AUDIO_DESIGN.md section 4.2
-    /// rule 3). The bridge still drives adaptive music from the signal.
+    /// owns the submission emits the precise cue (AUDIO_DESIGN section 4.2 rule 3).
     /// </summary>
     private void EmitWordCue(in WordSubmission submission)
     {
@@ -228,6 +358,29 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         EventBus.Cue("word.bonus");
     }
 
+    /// <summary>
+    /// The keystone sequence (section 8.3) - the ONLY event allowed the full loud
+    /// budget: gold sweep, 1.5% screen pulse, double haptic. Input stays live
+    /// throughout (UI-16): the player can start the next word mid-celebration.
+    /// </summary>
+    private void PlayKeystone()
+    {
+        _grid.PlayKeystoneSweep();
+
+        if (!UiAnim.Reduced)
+        {
+            _stage.PivotOffset = _stage.Size * 0.5f;
+            Tween tween = UiAnim.On(_stage, "pulse");
+            tween.TweenProperty(_stage, "scale", new Vector2(1.015f, 1.015f), 0.12f)
+                 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+            tween.TweenProperty(_stage, "scale", Vector2.One, 0.16f)
+                 .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        }
+
+        UiAnim.Haptic(30);
+        GetTree().CreateTimer(0.09, false).Timeout += () => UiAnim.Haptic(18);
+    }
+
     private static string ReasonFor(WordSubmissionKind kind) => kind switch
     {
         WordSubmissionKind.Invalid or WordSubmissionKind.TooShort => "Use at least 3 letters",
@@ -240,7 +393,32 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         _ => "Try another word"
     };
 
-    // ---------------------------------------------------------------- hints
+    // ------------------------------------------------------------------ hints
+    private void OpenHintSheet()
+    {
+        if (_session is null || _results.IsOpen) return;
+        var cfg = ConfigService.Instance.Config;
+        int hintsLeft = Mathf.Max(0, cfg.Economy.MaxHintsPerForge - _session.HintsUsed);
+        if (hintsLeft == 0)
+        {
+            EventBus.Cue("ui.disabled");
+            _toast.Show("No more reveals for this forge", Tok.Muted);
+            return;
+        }
+
+        int cost = EconomyModel.HintCost(_session.HintsUsed + 1, cfg.Economy);
+        bool adVisible = SaveService.Instance.Data.LifetimeForges + 1
+                         >= cfg.Progression.FirstSession.RewardedEntryPointsVisibleFromForge
+                         && AdManager.Instance.CanOfferRewarded("R_HINT", out _);
+        _hints.Open(cost, _session.FreeHintsRemaining, hintsLeft, adVisible);
+    }
+
+    private void OnCoinHint()
+    {
+        _hints.Close();
+        ApplyHint(HintSource.Coin);
+    }
+
     private void ApplyHint(HintSource source)
     {
         if (_session is null || _results.IsOpen) return;
@@ -254,12 +432,12 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         if (!hint.Granted)
         {
             EventBus.Cue("ui.disabled");
-            _hud.Toast(hint.Reason switch
+            _toast.Show(hint.Reason switch
             {
-                "insufficient_coins" => "Not enough coins for a hint",
-                "max_hints_reached" => "No more hints for this forge",
+                "insufficient_coins" => "Not enough coins for a reveal",
+                "max_hints_reached" => "No more reveals for this forge",
                 _ => "Nothing left to reveal"
-            }, Ui.Bad);
+            }, Tok.Muted);
             return;
         }
 
@@ -269,38 +447,69 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
     private void RevealLetter(char letter, int slotIndex, string source)
     {
+        _rack.ClearNudge();
         _grid.Refresh();
         _hud.Refresh(_session!);
-        _hud.Toast($"Revealed {char.ToUpperInvariant(letter)}", Ui.Good);
+        UpdateHintBadge();
+        _toast.Show($"Revealed {char.ToUpperInvariant(letter)}", Tok.Jade);
         EventBus.Instance.EmitSignal(EventBus.SignalName.HintGranted,
             slotIndex, char.ToUpperInvariant(letter).ToString());
         AnalyticsService.Instance.Record("hint", source);
+        AnalyticsService.Instance.Record("slot_reveal_count",
+            (_session!.SolutionWordCount - _session.FoundSolutions.Count).ToString());
+    }
+
+    private void UpdateHintBadge()
+    {
+        if (_session is null) return;
+        var cfg = ConfigService.Instance.Config;
+        int left = Mathf.Max(0, cfg.Economy.MaxHintsPerForge - _session.HintsUsed);
+        _rack.SetHint(left, _session.FreeHintsRemaining > 0);
     }
 
     /// <summary>
     /// Opt-in only. The ad grant resolves on the main thread (AndroidAdService
-    /// completes its Task inline from the SDK signal), so it is safe to touch
-    /// the session here. A no-fill leaves the coin hint working.
+    /// completes its Task inline from the SDK signal), so it is safe to touch the
+    /// session here. A no-fill leaves the coin hint working and says so neutrally.
     /// </summary>
     private async void OnRewardedHint()
     {
         if (_session is null || _results.IsOpen || _adBusy) return;
         _adBusy = true;
+        _hints.SetAdLoading(true);
         try
         {
             bool granted = await AdManager.Instance.TryRewardedAsync("R_HINT", 0);
             if (granted && _session is not null && !_results.IsOpen)
+            {
+                _hints.FlashAdGranted();
+                _hints.Close();
                 ApplyHint(HintSource.Ad);
+            }
             else
             {
-                EventBus.Cue("ui.disabled");
-                _hud.Toast("Ad unavailable — coin hint still works.", Ui.Muted);
+                // Section 9.4: neutral copy, no error, no retry prompt.
+                _hints.SetAdLoading(false);
+                _hints.Close();
+                _toast.Show("Sponsor unavailable — the coin reveal still works", Tok.Muted);
             }
         }
-        finally { _adBusy = false; }
+        finally
+        {
+            _adBusy = false;
+            _hints.SetAdLoading(false);
+        }
     }
 
-    // -------------------------------------------------------------- results
+    private void OnRevealOffer()
+    {
+        if (_session is null) return;
+        if (!_session.TryGrantStruggleReveal(out char letter, out int slot, out _)) return;
+        EventBus.Cue("nudge.reveal");
+        RevealLetter(letter, slot, "struggle");
+    }
+
+    // ---------------------------------------------------------------- results
     private void ShowResults()
     {
         if (_session?.Outcome is null || _forge is null) return;
@@ -314,6 +523,9 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         ProgressionService.Instance.RecordForge(_outcome.ForgeId, _outcome.Result.Stars,
                                                 _outcome.TotalCoins);
 
+        // The seam is the only place Heat is discussed numerically (E5).
+        _hud.SetHeat(RunService.Instance.Heat, RunService.Instance.RunScore, true);
+
         bool canDouble = AdManager.Instance.CanOfferRewarded("R_DOUBLE", out _);
         _results.Open(_outcome, _heatBefore, RunService.Instance.Heat, canDouble);
         AdManager.Instance.SetUnclaimedReward(canDouble);
@@ -321,10 +533,19 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
             _outcome.Result.Stars.ToString(), _outcome.TotalCoins.ToString());
     }
 
+    private void OnJarBurst()
+    {
+        _hud.BurstJar();
+        AnalyticsService.Instance.Record("jar_burst",
+            ConfigService.Instance.Config.Economy.PerBonusWord.ToString());
+        UiAnim.Haptic(20);
+    }
+
     private async void OnDoubleHaul()
     {
         if (_outcome is null || _doubled || _adBusy) return;
         _adBusy = true;
+        _results.SetAdLoading(true);
         try
         {
             int extra = _outcome.TotalCoins;
@@ -340,7 +561,11 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
             AdManager.Instance.SetUnclaimedReward(false);
             AnalyticsService.Instance.Record("double_haul", extra.ToString());
         }
-        finally { _adBusy = false; }
+        finally
+        {
+            _adBusy = false;
+            _results.SetAdLoading(false);
+        }
     }
 
     private void ContinueAfterResults()

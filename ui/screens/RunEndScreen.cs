@@ -6,20 +6,30 @@ using LexiForge.Core;
 namespace LexiForge.UI;
 
 /// <summary>
-/// A run ending is a REWARD moment, never a loss screen (GDD 3.3). The player
-/// may always start a fresh run for free; "Cool the forge" is an optional
-/// continuation with three equivalent prices — 1 rewarded ad, coins, or 1 Mark —
-/// so two of the three choices are free-to-play currencies and none is a paywall.
+/// A run ending is a REWARD moment, never a loss screen (GDD 3.3 / UI-02).
+///
+///  - The headline is a COUNT of what was made - "14 words forged" - not a verdict
+///    (UI-53). Peak-end: the screen must end on a gain.
+///  - The run's rune build is displayed underneath as its signature (E4).
+///  - "Cool the forge" offers three options at IDENTICAL visual weight (UI-54).
+///    If the ad option is privileged, the "choice" is a dark pattern and the GDD
+///    charter is violated in pixels even though it is honoured in config.
+///  - "End run" is a real button, not a grey text link (UI-55). Making the exit
+///    small is the cheapest dark pattern in the genre.
+///  - "The forge cooled", never "You failed": there is no fail state (UI-56).
 /// </summary>
 public sealed partial class RunEndScreen : Control, IScreen
 {
-    private Label _score = null!;
-    private Label _details = null!;
-    private Label _runes = null!;
+    private Label _headline = null!;
+    private Label _numbers = null!;
+    private Label _marks = null!;
     private Label _status = null!;
+    private Label _reason = null!;
+    private BuildStrip _build = null!;
     private Button _adCool = null!;
     private Button _coinCool = null!;
     private Button _markCool = null!;
+    private Button _endRun = null!;
     private PauseOverlay _pause = null!;
     private RunEndInfo? _info;
     private int _runIndex;
@@ -29,40 +39,112 @@ public sealed partial class RunEndScreen : Control, IScreen
 
     public override void _Ready()
     {
-        var background = new ColorRect { Color = Ui.Bg, MouseFilter = MouseFilterEnum.Ignore };
+        Tok.Setup(GetViewportRect().Size.X);
+
+        var background = new ColorRect { Color = Tok.BgBase, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(background);
         Ui.FullRect(background);
 
-        var column = Ui.AttachColumn(this, 24, 56);
-        column.AddChild(Ui.MakeLabel("RUN COMPLETE", 62, Ui.Gold));
-        _score = Ui.MakeLabel("", 56, Ui.Ember);
-        column.AddChild(_score);
-        _details = Ui.MakeLabel("", 28, Ui.Text);
-        column.AddChild(_details);
-        _runes = Ui.MakeLabel("", 26, Ui.Muted);
-        column.AddChild(_runes);
+        var column = Ui.AttachColumn(this, 12f, Tok.MarginDp);
+        column.AddChild(Ui.Spacer(12f));
 
-        var coolPanel = Ui.MakePanel(Ui.Panel, 24);
-        column.AddChild(coolPanel);
-        var coolColumn = new VBoxContainer();
-        coolColumn.AddThemeConstantOverride("separation", 14);
-        coolPanel.AddChild(coolColumn);
-        coolColumn.AddChild(Ui.MakeLabel("Cool the forge  ·  −25 Heat  ·  keep this run going", 26, Ui.Gold));
+        _headline = Ui.Display(Ui.MakeLabel("", 30f, Tok.Text), this);
+        column.AddChild(_headline);
 
-        _adCool = Ui.MakeButton("", OnAdCool, Ui.PanelRaised, 96, 26);
-        coolColumn.AddChild(_adCool);
-        _coinCool = Ui.MakeButton("", OnCoinCool, Ui.PanelRaised, 96, 26);
-        coolColumn.AddChild(_coinCool);
-        _markCool = Ui.MakeButton("", OnMarkCool, Ui.PanelRaised, 96, 26);
-        coolColumn.AddChild(_markCool);
+        _build = new BuildStrip();
+        _build.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        column.AddChild(_build);
 
-        _status = Ui.MakeLabel("", 26, Ui.Good);
+        // Two deliberate lines instead of one wrappable one: the full receipt is
+        // ~1213 px at 30 sp and ~1116 px at 24 sp, so it never fits 936 px and the
+        // wrap used to strand "0" at the end of the first line with "Marks" below.
+        // A score/coins line plus a quieter Marks line reads like a receipt and is
+        // stable for any number of digits.
+        _numbers = Ui.MakeLabel("", 24f, Tok.Gold, HorizontalAlignment.Left);
+        column.AddChild(_numbers);
+
+        _marks = Ui.MakeLabel("", 20f, Tok.Muted, HorizontalAlignment.Left);
+        column.AddChild(_marks);
+
+        _reason = Ui.MakeLabel("", 22f, Tok.TextDim);
+        column.AddChild(_reason);
+
+        column.AddChild(Ui.Spacer(8f));
+
+        // Three identical cards. Same 96 dp height, same fill, same border, same
+        // label size. The only difference is the AD badge on the first.
+        column.AddChild(Ui.MakeLabel("Cool the forge  ·  keep this run going", 20f, Tok.Muted,
+                                    HorizontalAlignment.Left, wrap: true));
+        var cards = Ui.MakeRow(8f);
+        cards.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        column.AddChild(cards);
+
+        _adCool = EqualCard("", OnAdCool, out var adBadge);
+        adBadge.Visible = true;
+        cards.AddChild(_adCool);
+        _coinCool = EqualCard("", OnCoinCool, out _);
+        cards.AddChild(_coinCool);
+        _markCool = EqualCard("", OnMarkCool, out _);
+        cards.AddChild(_markCool);
+
+        _status = Ui.MakeLabel("", 20f, Tok.Jade, HorizontalAlignment.Center);
         column.AddChild(_status);
 
-        column.AddChild(Ui.MakeButton("NEW RUN", OnNewRun, Ui.Ember, 120, 38, null));
-        column.AddChild(Ui.MakeButton("Home", () => SceneRouter.Instance.GoHome(), Ui.PanelRaised, 96, 28, "ui.back"));
+        column.AddChild(Ui.Spacer(8f));
+
+        _endRun = Ui.MakeButton("End run", () => SceneRouter.Instance.GoHome(), BtnKind.Secondary, 56f, 22f, "ui.back");
+        column.AddChild(_endRun);
 
         _pause = PauseOverlay.AttachTo(this, "Quit game", () => GetTree().Quit());
+    }
+
+    /// <summary>
+    /// A cool card. The optional AD badge is the ONLY difference between the three:
+    /// equal size, equal contrast, equal hit area (UI-54).
+    /// </summary>
+    private static Button EqualCard(string label, Action onPressed, out AdBadge badge)
+    {
+        Button card = Ui.MakeButton("", onPressed, BtnKind.Secondary, 96f, 20f, "ui.tap");
+        card.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        card.SizeFlagsVertical = SizeFlags.ExpandFill;
+
+        var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        column.SetAnchorsPreset(LayoutPreset.FullRect);
+        column.Alignment = BoxContainer.AlignmentMode.Center;
+        column.AddThemeConstantOverride("separation", Tok.I(4f));
+        card.AddChild(column);
+
+        Label text = Ui.MakeLabel(label, 20f, Tok.Text, HorizontalAlignment.Center, wrap: true);
+        text.MouseFilter = MouseFilterEnum.Ignore;
+        column.AddChild(text);
+        card.SetMeta("label", text);
+
+        // The badge is an OVERLAY, not a second row. Stacked under the label it made
+        // the ad card the only two-line card in a three-up row - a weight difference
+        // where UI-54 allows exactly one: the badge itself. In the corner, all three
+        // labels stay on the same baseline and the card is still marked as an ad.
+        //
+        // Positioned from its MEASURED width, not a fixed offset: the badge sizes
+        // itself in _Ready (48 dp for "AD" at 20 sp plus its padding) and a guessed
+        // 46 dp inset put its right edge 6 px outside the card.
+        AdBadge created = AdBadge.Create();
+        badge = created;
+        created.Visible = false;
+        card.AddChild(created);
+        card.Resized += () => PlaceBadge(card, created);
+        return card;
+    }
+
+    private static void PlaceBadge(Button card, AdBadge badge)
+    {
+        Vector2 size = badge.Size;
+        if (size.X < 1f) return;
+        badge.Position = new Vector2(card.Size.X - size.X - Tok.Dp(6f), Tok.Dp(6f));
+    }
+
+    private static void SetCardLabel(Button card, string text)
+    {
+        if (card.GetMeta("label").AsGodotObject() is Label label) label.Text = text;
     }
 
     public void OnEnter(object? payload)
@@ -85,14 +167,9 @@ public sealed partial class RunEndScreen : Control, IScreen
         StopListening();
         _pause.Close();
     }
+
     public void OnBack() => _pause.Toggle();
 
-    /// <summary>
-    /// Same router-owned lifecycle as Home: _Ready/_ExitTree loses listeners on
-    /// pooled screens, while _EnterTree runs before autoloads publish their
-    /// static Instance (NullReferenceException under F6 / --scene). Idempotent
-    /// because GoTo() may call OnEnter twice without an intervening OnExit.
-    /// </summary>
     private void StartListening()
     {
         if (_listening) return;
@@ -113,9 +190,7 @@ public sealed partial class RunEndScreen : Control, IScreen
 
     private void Render()
     {
-        // Defensive: never touch Controls before _Ready has built them, even if
-        // a future caller moves StartListening() earlier in the lifecycle.
-        if (_score is null) return;
+        if (_headline is null) return;
         RunEndInfo info = _info ?? new RunEndInfo
         {
             TotalScore = RunService.Instance.RunScore,
@@ -127,15 +202,26 @@ public sealed partial class RunEndScreen : Control, IScreen
 
         int score = Math.Max(info.TotalScore, RunService.Instance.RunScore);
         double heat = RunService.Instance.Heat > 0 ? RunService.Instance.Heat : info.FinalHeat;
-        _score.Text = $"{score} points";
-        _details.Text = $"{info.Forges} forges  ·  final Heat {heat:0}/100\n" +
-                        $"Wallet: {EconomyService.Instance.Coins} coins  ·  {EconomyService.Instance.Marks} Marks";
-        _runes.Text = info.Runes.Count == 0 ? "Runes drafted: —" : "Runes drafted: " + string.Join(", ", info.Runes);
+
+        // UI-53: a count, not a verdict. If the count is unknown (older payload),
+        // fall back to the forge count rather than inventing a number.
+        int words = info.WordsForged;
+        _headline.Text = words > 0 ? $"{words} words forged" : $"{info.Forges} forges forged";
+
+        var runes = RunService.Instance.OwnedRunes;
+        _build.Refresh(runes, 3, false);
+
+        _numbers.Text = $"{score:N0}  ·  {EconomyService.Instance.Coins:N0} coins";
+        _marks.Text = $"{EconomyService.Instance.Marks} Marks";
+
+        // UI-56: never "you failed".
+        bool capped = heat >= ConfigService.Instance.Config.Heat.Max - 0.01;
+        _reason.Text = capped ? "The forge cooled" : "Run complete";
 
         var cfg = ConfigService.Instance.Config;
-        _adCool.Text = "Watch a rewarded ad (opt-in)";
-        _coinCool.Text = $"Pay {cfg.Sinks.CoolForgeCoins} coins";
-        _markCool.Text = "Spend 1 Sponsor Mark";
+        SetCardLabel(_adCool, "1 ad");
+        SetCardLabel(_coinCool, $"{cfg.Sinks.CoolForgeCoins} coins");
+        SetCardLabel(_markCool, "1 Mark");
 
         bool available = !_cooled;
         _adCool.Visible = available;
@@ -144,6 +230,7 @@ public sealed partial class RunEndScreen : Control, IScreen
         _adCool.Disabled = _adBusy || !AdManager.Instance.CanOfferRewarded("R_COOL", out _);
         _coinCool.Disabled = EconomyService.Instance.Coins < cfg.Sinks.CoolForgeCoins;
         _markCool.Disabled = EconomyService.Instance.Marks < 1;
+        _endRun.Visible = true;
     }
 
     private async void OnAdCool()
@@ -153,11 +240,15 @@ public sealed partial class RunEndScreen : Control, IScreen
         try
         {
             bool granted = await AdManager.Instance.TryRewardedAsync("R_COOL", 0);
-            if (granted) Cool();
+            if (granted)
+            {
+                AnalyticsService.Instance.Record("run_end_choice", "ad");
+                Cool();
+            }
             else
             {
                 EventBus.Cue("ui.disabled");
-                _status.Text = "Ad unavailable — the coin and Mark options are still free to use.";
+                _status.Text = "Sponsor unavailable — coins and Marks still work.";
             }
         }
         finally
@@ -171,7 +262,11 @@ public sealed partial class RunEndScreen : Control, IScreen
     {
         if (_cooled) return;
         int cost = ConfigService.Instance.Config.Sinks.CoolForgeCoins;
-        if (EconomyService.Instance.TrySpendCoins(cost, "cool_forge")) Cool();
+        if (EconomyService.Instance.TrySpendCoins(cost, "cool_forge"))
+        {
+            AnalyticsService.Instance.Record("run_end_choice", "coins");
+            Cool();
+        }
         else
         {
             EventBus.Cue("ui.disabled");
@@ -182,7 +277,11 @@ public sealed partial class RunEndScreen : Control, IScreen
     private void OnMarkCool()
     {
         if (_cooled) return;
-        if (EconomyService.Instance.TrySpendMarks(1, "cool_forge")) Cool();
+        if (EconomyService.Instance.TrySpendMarks(1, "cool_forge"))
+        {
+            AnalyticsService.Instance.Record("run_end_choice", "mark");
+            Cool();
+        }
         else
         {
             EventBus.Cue("ui.disabled");
@@ -194,21 +293,10 @@ public sealed partial class RunEndScreen : Control, IScreen
     {
         _cooled = true;
         RunService.Instance.CoolForge();
-        AnalyticsService.Instance.Record("cool_forge", ((int)Math.Round(RunService.Instance.Heat)).ToString());
+        AnalyticsService.Instance.Record("cool_forge",
+            ((int)Math.Round(RunService.Instance.Heat)).ToString());
         Render();
         NextForge();
-    }
-
-    private void OnNewRun()
-    {
-        SaveData save = SaveService.Instance.Data;
-        int seed = unchecked((int)Time.GetUnixTimeFromSystem() ^ (save.LifetimeForges * 7919));
-        AdManager.Instance.SetDailyForge(false);
-        RunService.Instance.StartRun(seed, false);
-        ForgeData? forge = ProgressionService.Instance.ForgeFor(0);
-        if (forge is null) { EventBus.Cue("ui.disabled"); SceneRouter.Instance.GoHome(); return; }
-        EventBus.Cue("run.start");
-        SceneRouter.Instance.GoToForge(forge, 0, RunService.Instance.Effects);
     }
 
     /// <summary>
