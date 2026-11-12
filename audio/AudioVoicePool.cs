@@ -36,6 +36,21 @@ public sealed partial class AudioVoicePool : Node
     private Voice?[] _voices = Array.Empty<Voice?>();
     private Random _rng = new(20261112);
 
+    /// <summary>Diagnostics: catalogued events that have at least one loaded stream.</summary>
+    public int LoadedEventCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (KeyValuePair<string, AudioStream[]> pair in _streamsByEvent)
+                if (pair.Value.Length > 0) n++;
+            return n;
+        }
+    }
+
+    /// <summary>Diagnostics: stream paths that failed to load.</summary>
+    public int MissingStreamCount => _warned.Count;
+
     public void Initialize(AudioEventTable table)
     {
         _table = table;

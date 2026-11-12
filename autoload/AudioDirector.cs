@@ -77,6 +77,11 @@ public sealed partial class AudioDirector : Node
         // GetTree().Paused is true (the pause overlay stops everything else).
         ProcessMode = ProcessModeEnum.Always;
 
+        // AudioServer is PROCESS-GLOBAL when the game runs embedded in the
+        // editor. A run that was closed while unfocused used to leave Master
+        // muted at -80 dB, and the next run inherited it. Normalise first.
+        NormalizeBootState();
+
         _table = LoadCatalog();
         BuildBuses();
         LoadSettings();
@@ -97,6 +102,32 @@ public sealed partial class AudioDirector : Node
         GD.Print($"[Audio] {_table.Version} | events={_table.Events.Count} " +
                  $"buses={_table.Buses.Count} voices={_table.VoicePoolSize} " +
                  $"stems={_table.Music.Stems.Count}");
+
+        // F8 is a debug-only "is sound actually reaching the bus?" probe.
+        if (OS.IsDebugBuild())
+        {
+            SetProcessUnhandledInput(true);
+            DumpState("boot");
+        }
+    }
+
+    /// <summary>
+    /// Reset both our fade state and the process-global Master bus. Called once
+    /// at boot; without it an embedded editor play session can start muted.
+    /// </summary>
+    private void NormalizeBootState()
+    {
+        _appSuspended = false;
+        _adPlaying = false;
+        _paused = false;
+        _masterExtraDb = 0f;
+        _masterExtraTargetDb = 0f;
+        _duckDb = 0f;
+        _duckTargetDb = 0f;
+        _duckHoldSeconds = 0.0;
+
+        AudioServer.SetBusMute(0, false);
+        AudioServer.SetBusVolumeDb(0, 0f);
     }
 
     private AudioEventTable LoadCatalog()
@@ -133,16 +164,48 @@ public sealed partial class AudioDirector : Node
         foreach (AudioBusDef bus in _table.Buses)
             AudioServer.SetBusSend(_busIndices[bus.Name], new StringName(bus.Send));
 
-        // Single safety net against stacked one-shots clipping a phone speaker.
-        // This is a brick-wall safety net, NOT a substitute for the LUFS mix pass.
-        // Godot 4.7 deprecates AudioEffectLimiter; the hard limiter predicts
-        // peaks instead of soft-clipping them, which is what a master bus wants.
-        var limiter = new AudioEffectHardLimiter
+        EnsureMasterLimiter();
+    }
+
+    /// <summary>
+    /// Exactly ONE hard limiter on Master. Embedded editor play sessions share
+    /// the editor process's AudioServer, so an unguarded AddBusEffect() stacked
+    /// one limiter per F5 — the test save has 89 sessions, i.e. 89 cascaded
+    /// limiters on the Master bus. Keep the first, delete the rest, and make
+    /// sure it is enabled and matches the current catalog ceiling.
+    ///
+    /// Godot 4.7 deprecates AudioEffectLimiter; the hard limiter predicts peaks
+    /// instead of soft-clipping them, which is what a master bus wants. It is a
+    /// brick-wall safety net, NOT a substitute for the LUFS mix pass.
+    /// </summary>
+    private void EnsureMasterLimiter()
+    {
+        var limiters = new List<int>();
+        for (int i = 0; i < AudioServer.GetBusEffectCount(0); i++)
+            if (AudioServer.GetBusEffect(0, i) is AudioEffectHardLimiter)
+                limiters.Add(i);
+
+        // Delete from the back so the remaining indices stay valid.
+        for (int i = limiters.Count - 1; i >= 1; i--)
+            AudioServer.RemoveBusEffect(0, limiters[i]);
+
+        AudioEffectHardLimiter limiter;
+        int slot;
+        if (limiters.Count > 0)
         {
-            CeilingDb = (float)_table.MasterLimiterCeilingDb,
-            Release = 0.2f
-        };
-        AudioServer.AddBusEffect(0, limiter);
+            limiter = (AudioEffectHardLimiter)AudioServer.GetBusEffect(0, limiters[0]);
+            slot = limiters[0];
+        }
+        else
+        {
+            limiter = new AudioEffectHardLimiter();
+            AudioServer.AddBusEffect(0, limiter);
+            slot = AudioServer.GetBusEffectCount(0) - 1;
+        }
+
+        limiter.CeilingDb = (float)_table.MasterLimiterCeilingDb;
+        limiter.Release = 0.2f;
+        AudioServer.SetBusEffectEnabled(0, slot, true);
     }
 
     private void LoadSettings()
@@ -316,31 +379,121 @@ public sealed partial class AudioDirector : Node
         base._Notification(what);
         switch ((long)what)
         {
+            // The -80 dB hard mute is a MOBILE audio-focus rule (AUDIO_DESIGN
+            // section 7 is "Mobile lifecycle"). On desktop we never suspend at
+            // all: window blur / minimise is noisy in the editor, and a single
+            // unpaired notification would silence the game permanently.
             case Node.NotificationApplicationPaused:
-            case Node.NotificationApplicationFocusOut:
-                // Audio focus loss is an OS-level event, not a user setting.
-                // Do not persist it and do not resume audio until focus returns.
-                _appSuspended = true;
-                // Cut in-flight one-shots: a tile tok must not keep ringing over
-                // another app's audio. Stems stay loaded and resume in phase.
-                _pool?.StopAll();
-                RefreshMasterTarget();
-                ApplyBusVolumes();
-                AnalyticsService.Instance.Record("audio_focus_loss");
+                if (IsHandheld()) SetAppSuspended(true);
+                else AnalyticsService.Instance.Record("audio_window_minimised");
                 break;
+
             case Node.NotificationApplicationResumed:
-                _appSuspended = false;
+                SetAppSuspended(false); // no-op on desktop; clears mobile suspend
                 // A full-screen ad activity returns focus here. Release the ad
                 // duck even if the SDK never reported a close; a rewarded ad
                 // still on screen would not have resumed yet.
                 if (_adPlaying) SetAdPlayback(false);
-                RefreshMasterTarget();
-                ApplyBusVolumes();
                 break;
+
+            // FOCUS_OUT is a WINDOW event, not an app-lifecycle event. On the
+            // desktop it fires every time the designer clicks the editor — and
+            // in the embedded game view it can fire on the very first frame.
+            // Its only partner is FOCUS_IN; RESUMED never arrives on desktop.
+            // Treating it as suspension used to hard-mute Master at -80 dB
+            // permanently, which is why the editor build was completely silent.
+            case Node.NotificationApplicationFocusOut:
+                if (IsHandheld()) SetAppSuspended(true);
+                else
+                {
+                    // Deliberately NO mute, NO -80 dB duck and NO StopAll():
+                    // a desktop game keeps playing when its window blurs.
+                    AnalyticsService.Instance.Record("audio_window_blur");
+                }
+                break;
+
+            case Node.NotificationApplicationFocusIn:
+                if (IsHandheld())
+                {
+                    SetAppSuspended(false);
+                    if (_adPlaying) SetAdPlayback(false);
+                }
+                else AnalyticsService.Instance.Record("audio_window_focus");
+                break;
+
             case Node.NotificationWMCloseRequest:
                 SaveService.Instance.Flush();
                 break;
         }
+    }
+
+    /// <summary>OS-level audio focus, never a user setting: not persisted and
+    /// never toggling the "Mute all" switch.</summary>
+    private void SetAppSuspended(bool suspended)
+    {
+        if (_appSuspended == suspended) return;
+        _appSuspended = suspended;
+
+        if (suspended)
+        {
+            // Cut in-flight one-shots: a tile tok must not keep ringing over
+            // another app's audio. Stems stay loaded and resume in phase.
+            _pool?.StopAll();
+            AnalyticsService.Instance.Record("audio_focus_loss");
+        }
+        else AnalyticsService.Instance.Record("audio_focus_gain");
+
+        RefreshMasterTarget();
+        ApplyBusVolumes();
+    }
+
+    private static bool IsHandheld()
+    {
+        string os = OS.GetName();
+        return os is "Android" or "iOS";
+    }
+
+    // ------------------------------------------------------------ diagnostics
+    /// <summary>
+    /// Debug-only. Prints everything needed to distinguish "no sound was
+    /// requested" from "sound was requested but the Master bus is muted",
+    /// straight into the editor Output panel.
+    /// </summary>
+    public void DumpState(string tag)
+    {
+        var buses = new List<string>();
+        foreach (AudioBusDef bus in _table.Buses)
+        {
+            if (!_busIndices.TryGetValue(bus.Name, out int index)) continue;
+            buses.Add($"{bus.Name}={AudioServer.GetBusVolumeDb(index):F1}dB" +
+                      (AudioServer.IsBusMute(index) ? "/MUTE" : ""));
+        }
+
+        GD.Print($"[Audio:{tag}] master={AudioServer.GetBusVolumeDb(0):F1}dB " +
+                 $"mute={AudioServer.IsBusMute(0)} fx={AudioServer.GetBusEffectCount(0)} | " +
+                 $"extraDb={_masterExtraDb:F1}->{_masterExtraTargetDb:F1} " +
+                 $"userMute={_muted} suspended={_appSuspended} ad={_adPlaying} paused={_paused} | " +
+                 $"streams={_pool?.LoadedEventCount ?? 0}/{_table.Events.Count} " +
+                 $"missing={_pool?.MissingStreamCount ?? 0} " +
+                 $"stemsPlaying={_music?.PlayingStemCount ?? 0}/{_table.Music.Stems.Count} | " +
+                 string.Join(", ", buses));
+    }
+
+    /// <summary>F8 in a debug build: clear every duck and play a hero cue, so
+    /// "is audio broken?" can be answered with one keypress.</summary>
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (!OS.IsDebugBuild()) return;
+        if (@event is not InputEventKey { Pressed: true, Echo: false } key ||
+            key.Keycode != Key.F8) return;
+
+        _muted = false;
+        NormalizeBootState();
+        RefreshMasterTarget();
+        ApplyBusVolumes();
+        Play("forge.complete");
+        DumpState("selftest");
+        GetViewport().SetInputAsHandled();
     }
 
     private static float Clamp01(float v) => Math.Clamp(v, 0f, 1f);

@@ -38,6 +38,17 @@ public sealed partial class MusicDirector : Node
     private int _heat;
     private bool _started;
 
+    /// <summary>Diagnostics: stems whose player is currently playing.</summary>
+    public int PlayingStemCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (Stem stem in _stems) if (stem.Player.Playing) n++;
+            return n;
+        }
+    }
+
     public void Initialize(AudioEventTable table)
     {
         _table = table;
