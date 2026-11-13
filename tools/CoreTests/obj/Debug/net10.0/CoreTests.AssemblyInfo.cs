@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("lexiforge-coretests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7b4f2d70157e7a51a20f24577d296d68f25debdc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9f4825f0efd1bf4eef5bd90f08ea21026f42ce7a")]
 [assembly: System.Reflection.AssemblyProductAttribute("lexiforge-coretests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("lexiforge-coretests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

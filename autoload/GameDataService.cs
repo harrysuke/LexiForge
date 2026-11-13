@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using LexiForge.Core;
@@ -30,6 +31,7 @@ public sealed partial class GameDataService : Node
 
     private WordTrie? _parsedTrie;
     private List<ForgeData>? _parsedForges;
+    private string[] _parsedGaps = Array.Empty<string>();
     private string? _parseError;
 
     public bool IsReady { get; private set; }
@@ -37,6 +39,15 @@ public sealed partial class GameDataService : Node
     public WordTrie Dictionary => _parsedTrie ?? throw new InvalidOperationException("Game data not loaded yet.");
     public IReadOnlyList<ForgeData> Forges
         => _parsedForges ?? (IReadOnlyList<ForgeData>)Array.Empty<ForgeData>();
+
+    /// <summary>
+    /// Shipped solution/slot words that are absent from words_en.dat. Non-empty
+    /// means the pack and the bonus-word trie drifted apart (they are generated
+    /// by two different tools — see LEVEL_DESIGN.md "Ordering trap"). ForgeSession
+    /// still accepts those words as solutions, but a build with gaps is a content
+    /// defect, so CI asserts this list is empty and boot logs a warning.
+    /// </summary>
+    public IReadOnlyList<string> DictionaryGaps => _parsedGaps;
 
     public override void _Ready() => Instance = this;
 
@@ -51,6 +62,7 @@ public sealed partial class GameDataService : Node
         _parseError = null;
         _parsedTrie = null;
         _parsedForges = null;
+        _parsedGaps = Array.Empty<string>();
 
         if (!FileAccess.FileExists(TriePath))
         {
@@ -99,6 +111,7 @@ public sealed partial class GameDataService : Node
                 if (!seen.Add(forge.ForgeId))
                     throw new InvalidDataException($"duplicate forge id {forge.ForgeId}");
 
+            _parsedGaps = FindDictionaryGaps(forges, trie);
             _parsedTrie = trie;
             _parsedForges = forges;
         }
@@ -113,6 +126,26 @@ public sealed partial class GameDataService : Node
         }
     }
 
+    /// <summary>
+    /// Cross-checks every shipped answer against the binary trie. This is a
+    /// WARNING, not a boot failure: ForgeSession treats solution words as
+    /// authoritative, so a stale trie must never soft-lock a player mid-forge.
+    /// The defect is still surfaced here (and asserted by CoreTests / DevSmoke)
+    /// so it gets fixed instead of shipping silently.
+    /// </summary>
+    private static string[] FindDictionaryGaps(List<ForgeData> forges, WordTrie trie)
+    {
+        var gaps = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (ForgeData forge in forges)
+        {
+            foreach (string word in forge.SolutionWords)
+                if (!trie.Contains(word)) gaps.Add(word.ToLowerInvariant());
+            foreach (GridSlot slot in forge.Slots)
+                if (!trie.Contains(slot.Word)) gaps.Add(slot.Word.ToLowerInvariant());
+        }
+        return gaps.ToArray();
+    }
+
     private void PublishData()
     {
         // Always emit exactly once, success or failure: Boot must show an explicit
@@ -120,7 +153,11 @@ public sealed partial class GameDataService : Node
         if (_parseError is null)
         {
             IsReady = true;
-            GD.Print($"[Data] ready | dictionary nodes={Dictionary.NodeCount} forges={Forges.Count}");
+            GD.Print($"[Data] ready | dictionary nodes={Dictionary.NodeCount} forges={Forges.Count} " +
+                     $"dictionary gaps={_parsedGaps.Length}");
+            if (_parsedGaps.Length > 0)
+                GD.PushWarning($"[Data] {_parsedGaps.Length} shipped answer(s) missing from words_en.dat: " +
+                               $"{string.Join(", ", _parsedGaps)}. Rebuild the trie (LEVEL_DESIGN.md ordering trap).");
         }
         EventBus.Instance.EmitSignal(EventBus.SignalName.DataReady);
     }

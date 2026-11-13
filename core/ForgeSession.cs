@@ -10,12 +10,22 @@ public enum WordSubmissionKind
     TooShort,
     NotConstructible,
     NotInDictionary,
+    /// <summary>A SOLUTION word that is already filled on the grid.</summary>
     AlreadyFound,
     BonusJarFull,
     BonusWord,
     SolutionWord,
     KeystoneLocked,
-    ForgeAlreadyComplete
+    ForgeAlreadyComplete,
+    /// <summary>
+    /// An OPTIONAL bonus word that is already in the Bonus Jar. Deliberately NOT
+    /// the same verdict as <see cref="AlreadyFound"/>: "forged" is the word the
+    /// game reserves for solution words (the toast says "FORGED ARC"). Reusing it
+    /// for a jar duplicate made a repeated 3-letter bonus word read as though the
+    /// player's revealed 4-letter answer had been refused (the CARE report).
+    /// Appended, not inserted, so existing numeric values stay stable.
+    /// </summary>
+    AlreadyInJar
 }
 
 public enum HintSource { Scripted, Free, Coin, Ad, Nudge }
@@ -32,6 +42,14 @@ public readonly record struct WordSubmission(
     public bool IsSuccess => Kind is WordSubmissionKind.BonusWord or WordSubmissionKind.SolutionWord;
     public bool IsPenalty => Kind is WordSubmissionKind.Invalid or WordSubmissionKind.TooShort
         or WordSubmissionKind.NotConstructible or WordSubmissionKind.NotInDictionary;
+
+    /// <summary>
+    /// A repeat is NOT a spelling mistake. The player built a real word that is
+    /// simply already recorded, so Flow and the clean streak stay intact and the
+    /// view keeps the tiles selected — the word can still be extended into the
+    /// longer answer the player was actually aiming for.
+    /// </summary>
+    public bool IsRepeat => Kind is WordSubmissionKind.AlreadyFound or WordSubmissionKind.AlreadyInJar;
 }
 
 public readonly record struct HintResult(
@@ -154,13 +172,24 @@ public sealed class ForgeSession
             return Penalty(WordSubmissionKind.TooShort, word);
         if (!IsConstructible(word, _bankWithWilds))
             return Penalty(WordSubmissionKind.NotConstructible, word);
-        if (!_dictionary.Contains(word))
+
+        // A shipped solution word is valid BY DEFINITION. It was already checked
+        // against the dictionary when the pack was built (ForgeValidator), and
+        // it is the exact answer Give Up reveals. The runtime words_en.dat is a
+        // SEPARATE payload whose only job is to validate OPTIONAL bonus words;
+        // pack_01.json and words_en.dat are produced by different tools and can
+        // drift (LEVEL_DESIGN.md "Ordering trap"). Checking the trie first made
+        // the game answer "Not in the dictionary" for a word it had just shown
+        // the player. Solution membership wins; only non-solutions need the trie.
+        bool isSolution = _solutions.Contains(word);
+        if (!isSolution && !_dictionary.Contains(word))
             return Penalty(WordSubmissionKind.NotInDictionary, word);
 
-        if (_solutions.Contains(word))
+        if (isSolution)
         {
             if (_found.Contains(word))
-                return new WordSubmission(WordSubmissionKind.AlreadyFound, word, Flow, _bonusJar.Count, _found.Count, -1, false);
+                return new WordSubmission(WordSubmissionKind.AlreadyFound, word, Flow, _bonusJar.Count, _found.Count,
+                                          SlotIndexFor(word), false);
 
             string keystone = _forge.KeystoneWord.ToLowerInvariant();
             if (word == keystone && !KeystoneUnlocked)
@@ -191,8 +220,10 @@ public sealed class ForgeSession
                                       _found.Count, SlotIndexFor(word), complete);
         }
 
+        // A jar duplicate is NOT a forged word. Keep the verdict distinct so the
+        // view never borrows solution-word language for a bonus-word outcome.
         if (_bonusJar.Contains(word, StringComparer.Ordinal))
-            return new WordSubmission(WordSubmissionKind.AlreadyFound, word, Flow, _bonusJar.Count, _found.Count, -1, false);
+            return new WordSubmission(WordSubmissionKind.AlreadyInJar, word, Flow, _bonusJar.Count, _found.Count, -1, false);
         if (_bonusJar.Count >= _economy.BonusWordCap)
             return new WordSubmission(WordSubmissionKind.BonusJarFull, word, Flow, _bonusJar.Count, _found.Count, -1, false);
 

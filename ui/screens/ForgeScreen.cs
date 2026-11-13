@@ -37,6 +37,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     private ResultsCard _results = null!;
     private HintSheet _hints = null!;
     private PauseOverlay _pause = null!;
+    private GiveUpModal _giveUp = null!;
 
     private ForgeSession? _session;
     private ForgeData? _forge;
@@ -91,16 +92,27 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         _pause = PauseOverlay.AttachTo(this, "Leave run — this forge starts over", LeaveRun,
                                        () => SceneRouter.Instance.GoHome());
 
+        // Sibling of the pause overlay, NOT a child of _stage: _stage is scaled
+        // by the keystone pulse, and an answer should never wobble. GiveUpModal
+        // calls MoveToFront() on Open(), so it wins whichever overlay opened last
+        // did. ForgeScreen guards against two overlays being open at once.
+        _giveUp = new GiveUpModal();
+        AddChild(_giveUp);
+
         _rack.WordSubmitted += OnWordSubmitted;
         _rack.ShuffleRequested += () => AnalyticsService.Instance.Record("shuffle");
         _rack.HintRequested += OpenHintSheet;
         _rack.TilePicked += OnTilePicked;
-        _hud.PauseRequested += () => _pause.Toggle();
+        _hud.PauseRequested += () => { if (!_giveUp.IsOpen) _pause.Toggle(); };
+        _hud.GiveUpRequested += OpenGiveUp;
         _hints.CoinRequested += OnCoinHint;
         _hints.AdRequested += OnRewardedHint;
         _results.ContinueRequested += ContinueAfterResults;
         _results.DoubleHaulRequested += OnDoubleHaul;
         _results.JarBurstRequested += OnJarBurst;
+        _giveUp.KeepForgingRequested += CloseGiveUp;
+        _giveUp.RestartRequested += RestartAfterGiveUp;
+        _giveUp.LeaveRunRequested += LeaveRunAfterGiveUp;
 
         Resized += LayoutBands;
         LayoutBands();
@@ -163,6 +175,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     {
         _pause.Close();
         _hints.Close();
+        _giveUp.Close();
         // A drag-submit can complete the forge, at which point _Process stops
         // updating InputBusy. Clear it so the results card's opt-in ad is not
         // silently rejected as "input busy".
@@ -174,11 +187,15 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
     {
         _pause.Close();
         _hints.Close();
+        _giveUp.Close();
         AdManager.Instance.InputBusy = false;
     }
 
     public void OnBack()
     {
+        // Back is the SAME decision as KEEP FORGING: a stuck player must never
+        // be trapped behind a card with one exit.
+        if (_giveUp.IsOpen) { CloseGiveUp(); return; }
         // Never pause on top of the results card: the player must be able to
         // collect their reward and continue.
         if (_results.IsOpen) return;
@@ -219,6 +236,7 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         _results.Close();
         _pause.Close();
         _hints.Close();
+        _giveUp.Close();
 
         UpdateHintBadge();
         LayoutBands();
@@ -229,7 +247,9 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
     public override void _Process(double delta)
     {
-        if (_session is null || _results.IsOpen) return;
+        // While the answer card is up, the forge clock stops: revealing the words
+        // must not silently cost the player par time, a nudge, or a struggle offer.
+        if (_session is null || _results.IsOpen || _giveUp.IsOpen) return;
 
         _session.Tick(delta);
         // Ads must never be loaded mid-gesture (GDD 11.5).
@@ -282,8 +302,26 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
 
         // Pre-submit Flow decides whether a penalty actually broke a streak.
         int flowBefore = (int)Math.Round(_session.Flow * 100);
+        string rawWord = word;
         WordSubmission submission = _session.Submit(word);
-        _rack.ClearSelection();
+
+        // Debug-only autopsy for "the game rejected the word it just revealed".
+        // Shows the EXACT string the rack built (a nearby tile can join a drag),
+        // the verdict, and whether the trie knows that word — enough to tell a
+        // stale words_en.dat from a mis-spelled gesture without guessing.
+        if (OS.IsDebugBuild() && !submission.IsSuccess)
+            GD.Print($"[WORD] raw='{rawWord}' len={rawWord.Length} norm='{submission.Word}' kind={submission.Kind} " +
+                     $"repeat={submission.IsRepeat} bank='{_session.Forge.LetterBank}' " +
+                     $"answer='{_session.Forge.KeystoneWord}' " +
+                     $"inTrie={GameDataService.Instance.Dictionary.Contains(rawWord.ToLowerInvariant())} " +
+                     $"gaps={GameDataService.Instance.DictionaryGaps.Count}");
+
+        // ONLY a repeat keeps the tiles. It is not a spelling mistake: the player
+        // can add the missing rune instead of rebuilding the word. This is the
+        // recovery path for a 3-tile drag that auto-submitted a prefix of a
+        // 4-letter answer (the CARE report). Successes, real penalties and the
+        // other "not yet" verdicts keep their existing clearing behaviour.
+        if (!submission.IsRepeat) _rack.ClearSelection();
         _grid.Refresh();
         _hud.Refresh(_session);
 
@@ -321,14 +359,22 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         {
             // UI-P2: rejection is information, not punishment. The rack wobbles
             // 6 dp, the strip turns Rust, one quiet dot. No screen shake.
-            _rack.Reject();
+            _rack.Reject(rawWord);
             if (submission.IsPenalty && flowBefore > 115) EventBus.Cue("flow.break");
-            _toast.Show(ReasonFor(submission.Kind), Tok.RustText);
+            // UI-66: name the exact word the rack built. A generic "Already
+            // forged" is indistinguishable from "the answer I was just shown was
+            // refused" when the player actually submitted a 3-letter prefix.
+            _toast.Show(ReasonFor(submission, rawWord), Tok.RustText);
             if (submission.IsPenalty)
             {
                 EventBus.Instance.EmitSignal(EventBus.SignalName.WordRejected, submission.Kind.ToString());
                 AnalyticsService.Instance.Record("word_bad", submission.Kind.ToString());
             }
+            // Repeats are deliberately NOT penalties, so WordRejected / word_bad
+            // never fire for them. Without this line a duplicate is invisible in
+            // telemetry even though the player saw a rejection toast.
+            else if (submission.IsRepeat)
+                AnalyticsService.Instance.Record("word_repeat", submission.Kind.ToString(), submission.Word);
         }
 
         if (submission.ForgeCompleted && _session.Outcome is not null) ShowResults();
@@ -381,17 +427,29 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         GetTree().CreateTimer(0.09, false).Timeout += () => UiAnim.Haptic(18);
     }
 
-    private static string ReasonFor(WordSubmissionKind kind) => kind switch
+    /// <summary>
+    /// UI-66: a rejection names the exact word the rack built and never borrows
+    /// the language of a DIFFERENT outcome. "Forged" belongs to solution words
+    /// (the success toast says "FORGED ARC"); a repeated bonus word goes in the
+    /// jar. Collapsing both into "Already forged" is what made a stray 3-tile
+    /// drag read as "the game refused the CARE it just revealed to me".
+    /// </summary>
+    private static string ReasonFor(in WordSubmission submission, string rawWord)
     {
-        WordSubmissionKind.Invalid or WordSubmissionKind.TooShort => "Use at least 3 letters",
-        WordSubmissionKind.NotConstructible => "Only the rune tiles on the rack",
-        WordSubmissionKind.NotInDictionary => "Not in the dictionary",
-        WordSubmissionKind.AlreadyFound => "Already forged",
-        WordSubmissionKind.BonusJarFull => "Bonus Jar is full",
-        WordSubmissionKind.KeystoneLocked => "Fill every other word first",
-        WordSubmissionKind.ForgeAlreadyComplete => "Forge complete",
-        _ => "Try another word"
-    };
+        string word = string.IsNullOrEmpty(rawWord) ? "" : rawWord.ToUpperInvariant();
+        return submission.Kind switch
+        {
+            WordSubmissionKind.Invalid or WordSubmissionKind.TooShort => "Use at least 3 letters",
+            WordSubmissionKind.NotConstructible => "Only the rune tiles on the rack",
+            WordSubmissionKind.NotInDictionary => $"{word} · not in the dictionary",
+            WordSubmissionKind.AlreadyFound => $"{word} · already forged",
+            WordSubmissionKind.AlreadyInJar => $"{word} · already in the jar",
+            WordSubmissionKind.BonusJarFull => $"Bonus Jar is full · {word} not added",
+            WordSubmissionKind.KeystoneLocked => "Fill every other word first",
+            WordSubmissionKind.ForgeAlreadyComplete => "Forge complete",
+            _ => "Try another word"
+        };
+    }
 
     // ------------------------------------------------------------------ hints
     private void OpenHintSheet()
@@ -507,6 +565,61 @@ public sealed partial class ForgeScreen : Control, IForgeScreen
         if (!_session.TryGrantStruggleReveal(out char letter, out int slot, out _)) return;
         EventBus.Cue("nudge.reveal");
         RevealLetter(letter, slot, "struggle");
+    }
+
+    // --------------------------------------------------------------- give up
+    /// <summary>
+    /// GDD 6.2.1 / UI-64. Show every word, change NO gameplay state. The modal only
+    /// reads ForgeData and ForgeSession, so KEEP FORGING restores the exact same
+    /// slots, rack, Flow, jar, hints and elapsed clock.
+    /// </summary>
+    private void OpenGiveUp()
+    {
+        if (_session is null || _forge is null || _giveUp.IsOpen) return;
+        // One overlay at a time. A results card is a reward moment; the hint and
+        // pause sheets already own the screen while open.
+        if (_results.IsOpen || _hints.IsOpen || _pause.IsOpen) return;
+
+        _rack.ClearSelection();
+        _rack.HideRevealOffer();
+        AdManager.Instance.InputBusy = false;
+        _giveUp.Open(_forge, _session);
+        AnalyticsService.Instance.Record("give_up_opened",
+            _forge.ForgeId.ToString(),
+            _session.FoundSolutions.Count.ToString(),
+            _session.SolutionWordCount.ToString(),
+            ((int)_session.ElapsedSeconds).ToString());
+    }
+
+    private void CloseGiveUp()
+    {
+        if (!_giveUp.IsOpen) return;
+        _giveUp.Close();
+        AnalyticsService.Instance.Record("give_up_kept");
+    }
+
+    /// <summary>
+    /// A fresh attempt at the SAME puzzle. ResetFor re-emits forge_start, which is
+    /// honest — a new attempt really did start. Heat, run index, coins, stars and
+    /// LifetimeForges are untouched because no forge was completed.
+    /// </summary>
+    private void RestartAfterGiveUp()
+    {
+        if (_forge is null) return;
+        int forgeId = _forge.ForgeId;
+        _giveUp.Close();
+        ResetFor(_forge, _runIndex, RunService.Instance.Effects);
+        // GDD 8.3: no interstitial after an abandon/retry. ProgressionService
+        // clears this flag on the next completed forge.
+        AdManager.Instance.SetAbandoned(true);
+        AnalyticsService.Instance.Record("give_up_restart", forgeId.ToString());
+    }
+
+    private void LeaveRunAfterGiveUp()
+    {
+        _giveUp.Close();
+        AnalyticsService.Instance.Record("give_up_leave");
+        LeaveRun();
     }
 
     // ---------------------------------------------------------------- results

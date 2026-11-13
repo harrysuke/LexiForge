@@ -21,6 +21,9 @@ public sealed partial class Toast : Control
     private Label _label = null!;
     private double _remaining;
 
+    /// <summary>Last text shown. Read by DevSmoke to assert rejection copy (UI-66).</summary>
+    public string CurrentText => _label?.Text ?? "";
+
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;

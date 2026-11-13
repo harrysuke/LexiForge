@@ -19,6 +19,7 @@ namespace LexiForge.UI;
 public sealed partial class ForgeHud : Control
 {
     [Signal] public delegate void PauseRequestedEventHandler();
+    [Signal] public delegate void GiveUpRequestedEventHandler();
 
     private HeatBar _heatBar = null!;
     private FlowMeter _flow = null!;
@@ -27,6 +28,7 @@ public sealed partial class ForgeHud : Control
     private Label _slots = null!;
     private Label _wallet = null!;
     private Button _pause = null!;
+    private Button _giveUp = null!;
     private int _lastFound = -1;
     private int _lastBonus = -1;
 
@@ -57,8 +59,11 @@ public sealed partial class ForgeHud : Control
         column.AddThemeConstantOverride("separation", Tok.I(6f));
         frame.AddChild(column);
 
-        // Row 1: pause (the quietest thing on screen) · theme · wallet.
-        var top = Ui.MakeRow(8f);
+        // Row 1: pause (the quietest thing on screen) · theme · Give up · wallet.
+        // Four items on a 360 dp column is tight. A 4 dp gap plus a tight-padded
+        // escape hatch gives UI-07's 20 sp theme line its width back; with the
+        // stock 8 dp gap and Ghost padding it was silently clipped to "Ember".
+        var top = Ui.MakeRow(4f);
         column.AddChild(top);
 
         _pause = Ui.MakeButton("", () => EmitSignal(SignalName.PauseRequested), BtnKind.Icon, 44f, 20f, null);
@@ -72,8 +77,22 @@ public sealed partial class ForgeHud : Control
         // difficulty index, not a player concept.
         _theme = Ui.MakeLabel("", 20f, Tok.Muted, HorizontalAlignment.Left);
         _theme.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        // ClipText is required for TrimEllipsis to actually draw an ellipsis;
+        // without it, a squeezed label just cuts off mid-word with no signal.
+        _theme.ClipText = true;
         _theme.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         top.AddChild(_theme);
+
+        // UI-64: the escape hatch sits with pause in the CHROME row, never next
+        // to the goal-gradient counter. Offering "Give up" at "1 word left" would
+        // nag at the exact moment the player is closest to the aha. 20 sp Muted
+        // Ghost keeps it at attention level 5 (UI_DESIGN 4.2). tapCue is null:
+        // the reveal card emits ui.open itself, so a cue here would double up.
+        _giveUp = Ui.MakeButton("Give up", () => EmitSignal(SignalName.GiveUpRequested),
+                                BtnKind.Ghost, 44f, 20f, null);
+        _giveUp.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        top.AddChild(_giveUp);
+        TightenGhost(_giveUp);
 
         var walletRow = Ui.MakeRow(4f);
         walletRow.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
@@ -98,6 +117,24 @@ public sealed partial class ForgeHud : Control
         _slots = Ui.MakeLabel("", 24f, Tok.Muted, HorizontalAlignment.Left);
         _slots.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         progress.AddChild(_slots);
+    }
+
+    /// <summary>
+    /// Trims ONE quiet Ghost button's side padding so the 20 sp theme label fits
+    /// at 360 dp. Every state stylebox must be overridden: Button measures itself
+    /// against the widest one, so changing only "normal" would leave hover /
+    /// pressed at 12 dp and gain nothing. Other Ghost buttons are untouched.
+    /// </summary>
+    private static void TightenGhost(Button button)
+    {
+        foreach (string state in new[] { "normal", "hover", "pressed", "disabled" })
+        {
+            if (button.GetThemeStylebox(state) is not StyleBoxFlat source) continue;
+            var tight = (StyleBoxFlat)source.Duplicate();
+            tight.ContentMarginLeft = Tok.Dp(3f);
+            tight.ContentMarginRight = Tok.Dp(3f);
+            button.AddThemeStyleboxOverride(state, tight);
+        }
     }
 
     private static Control Fill(Control child)
@@ -146,6 +183,9 @@ public sealed partial class ForgeHud : Control
         bool firstRun = RunService.Instance.IsFirstRunEver;
         _jar.Visible = !firstRun || session.BonusJar.Count > 0;
         _flow.Visible = !firstRun || session.CleanStreak > 0;
+        // UI-60: hide rather than disable. A completed forge has nothing left to
+        // give up on, and the results card owns the screen from that moment.
+        _giveUp.Visible = !session.Completed;
 
         _lastFound = found;
         _lastBonus = session.BonusJar.Count;

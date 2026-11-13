@@ -64,6 +64,7 @@ public sealed partial class LetterRack : Control
     private bool _revealOffer;
     private Action? _onReveal;
     private int _revealGeneration;
+    private int _rejectGeneration;
 
     public string CurrentWord => BuildWord();
     public bool IsDragging => _dragging;
@@ -445,9 +446,18 @@ public sealed partial class LetterRack : Control
     /// UI-P2: rejection is information, not punishment. The rack and the strip
     /// wobble 6 dp for 90 ms, the strip text turns Rust, a 6 dp dot fades above
     /// the strip. The grid does not move. The screen does not shake.
+    ///
+    /// ForgeScreen clears the selection BEFORE calling this, so the compose strip
+    /// used to be empty while it "turned Rust" — the player could not see which
+    /// word the game actually received. That is exactly how a stray tile in a
+    /// drag reads as "I typed MEAT but it says not in the dictionary". Keep the
+    /// rejected word visible (Rust) for the length of the wobble, then clear it
+    /// only if the player has not already started the next word.
     /// </summary>
-    public void Reject()
+    public void Reject(string word)
     {
+        int generation = ++_rejectGeneration;
+        _wordLabel.Text = word.ToUpperInvariant();
         _wordLabel.AddThemeColorOverride("font_color", Tok.RustText);
         _rejectDot = 1f;
         EventBus.Cue("word.reject");
@@ -458,6 +468,10 @@ public sealed partial class LetterRack : Control
         tween.TweenCallback(Callable.From(() =>
         {
             ApplyWobble(0f);
+            // A new tap (or a newer rejection) already owns the strip. Never let
+            // a stale tween erase a word the player is currently composing.
+            if (generation != _rejectGeneration || _selection.Count > 0) return;
+            _wordLabel.Text = "";
             _wordLabel.AddThemeColorOverride("font_color", Tok.Gold);
         }));
 

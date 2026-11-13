@@ -44,6 +44,8 @@ internal static class Program
         TestRuneDraft(cfg);
         TestSaveData();
         TestForgeSession(cfg);
+        TestSolutionWordsAreAuthoritative(cfg);
+        TestRevealedKeystoneAfterDuplicateBonus(cfg);
         TestEchoRune(cfg);
         TestRunState(cfg);
         TestP0UiContracts(cfg);
@@ -290,7 +292,12 @@ internal static class Program
         var bonus = session.Submit("roe");
         Check("bonus word accepted into jar", bonus.Kind == WordSubmissionKind.BonusWord && session.BonusJar.Count == 1);
         Check("bonus word does not advance clean streak", session.CleanStreak == 0);
-        Check("bonus word duplicate rejected", session.Submit("roe").Kind == WordSubmissionKind.AlreadyFound);
+        // UI-66: a jar duplicate is NOT a forged word. Reusing AlreadyFound here
+        // is exactly what produced the CARE "Already forged" report.
+        WordSubmission jarRepeat = session.Submit("roe");
+        Check("bonus word duplicate is AlreadyInJar", jarRepeat.Kind == WordSubmissionKind.AlreadyInJar,
+            jarRepeat.Kind.ToString());
+        Check("bonus word duplicate is a repeat, not a penalty", jarRepeat.IsRepeat && !jarRepeat.IsPenalty);
 
         var first = session.Submit("fog");
         Check("solution accepted", first.Kind == WordSubmissionKind.SolutionWord);
@@ -336,6 +343,133 @@ internal static class Program
         var galeSession = new ForgeSession(forge, dict, cfg,
             RuneEffects.From(cfg.Runes.Where(r => r.Id == "gale"), cfg.Draft));
         Check("gale wild allows one extra letter", ForgeSession.IsConstructible("gofer", "forg*"));
+    }
+
+    /// <summary>
+    /// Regression for the player report: MAT, EAT, Give Up (reveals MEAT),
+    /// KEEP FORGING, then MEAT -> "Not in the dictionary". Submit() used to check
+    /// the optional bonus-word trie BEFORE solution membership, so ANY drift
+    /// between pack_01.json and words_en.dat made the game reject the exact
+    /// answer it had just shown. The pack and the trie are built by different
+    /// tools (LEVEL_DESIGN.md "Ordering trap"), so this must be impossible.
+    /// </summary>
+    private static void TestSolutionWordsAreAuthoritative(BalanceConfig cfg)
+    {
+        var forge = new ForgeData
+        {
+            ForgeId = 777,
+            Theme = "Emberworks",
+            LetterBank = "team",
+            SolutionWords = new List<string> { "eat", "mat", "meat" },
+            KeystoneWord = "meat",
+            Slots = new List<GridSlot>
+            {
+                new() { Word = "meat", Row = 0, Column = 1, Direction = "h", IsKeystone = true },
+                new() { Word = "eat",  Row = 0, Column = 2, Direction = "v" },
+                new() { Word = "mat",  Row = 2, Column = 0, Direction = "h" }
+            },
+            DifficultyIndex = 6.5,
+            ParTimeSeconds = 21.6,
+            Seed = 15838
+        };
+
+        // Simulate a STALE words_en.dat: "meat" is missing even though the pack
+        // ships it as the keystone. All other words are present, exactly like the
+        // reported session where MAT and EAT were happily accepted.
+        var dict = new WordTrie();
+        foreach (string w in new[] { "eat", "mat", "team", "tame", "tea", "ate" }) dict.Add(w);
+        Check("repro: dictionary really lacks 'meat'", !dict.Contains("meat"));
+
+        var session = new ForgeSession(forge, dict, cfg, RuneEffects.None);
+        Check("repro: MAT accepted", session.Submit("mat").Kind == WordSubmissionKind.SolutionWord);
+        Check("repro: EAT accepted", session.Submit("eat").Kind == WordSubmissionKind.SolutionWord);
+        WordSubmission keystone = session.Submit("meat");
+        Check("repro: revealed MEAT accepted despite stale trie",
+            keystone.Kind == WordSubmissionKind.SolutionWord && keystone.ForgeCompleted && session.Completed,
+            keystone.Kind.ToString());
+        Check("repro: reveal flow keeps keystone gating",
+            new ForgeSession(forge, dict, cfg, RuneEffects.None)
+                .Submit("meat").Kind == WordSubmissionKind.KeystoneLocked);
+
+        // The trie still governs OPTIONAL words: dropping the check entirely
+        // would turn every anagram of the bank into a free bonus coin.
+        var fresh = new ForgeSession(forge, dict, cfg, RuneEffects.None);
+        Check("non-solution word still needs the dictionary",
+            fresh.Submit("ema").Kind == WordSubmissionKind.NotInDictionary);
+        Check("dictionary bonus word still pays out",
+            fresh.Submit("team").Kind == WordSubmissionKind.BonusWord);
+    }
+
+    /// <summary>
+    /// Replay of the "CARE / Already Forged" report. The real play log shows
+    /// ARC, ERA forged; car/ace/ear accepted into the Bonus Jar; then repeated
+    /// 3-tile drags of car/ace/ear while the player was trying to spell the
+    /// revealed 4-letter keystone. care was NEVER submitted — but a generic
+    /// "Already forged" toast made it look like the revealed answer was refused.
+    /// </summary>
+    private static void TestRevealedKeystoneAfterDuplicateBonus(BalanceConfig cfg)
+    {
+        var forge = new ForgeData
+        {
+            ForgeId = 3,
+            Theme = "Emberworks",
+            LetterBank = "race",
+            SolutionWords = new List<string> { "arc", "era", "care" },
+            KeystoneWord = "care",
+            Slots = new List<GridSlot>
+            {
+                new() { Word = "care", Row = 0, Column = 0, Direction = "h", IsKeystone = true },
+                new() { Word = "arc",  Row = 0, Column = 1, Direction = "v" },
+                new() { Word = "era",  Row = 0, Column = 3, Direction = "v" }
+            },
+            DifficultyIndex = 6.5,
+            ParTimeSeconds = 21.644,
+            Seed = 23757
+        };
+
+        // Deliberately omit "care" as well: this replay must prove the stale-trie
+        // defence from the MEAT report AND the duplicate-verdict fix together.
+        var dict = new WordTrie();
+        foreach (string w in new[] { "arc", "era", "ace", "ear", "car", "race", "are", "rec" }) dict.Add(w);
+        Check("repro CARE: stale trie really lacks 'care'", !dict.Contains("care"));
+
+        var s = new ForgeSession(forge, dict, cfg, RuneEffects.None);
+        Check("repro CARE: ARC accepted", s.Submit("arc").Kind == WordSubmissionKind.SolutionWord);
+        Check("repro CARE: ERA accepted", s.Submit("era").Kind == WordSubmissionKind.SolutionWord);
+        Check("repro CARE: keystone unlocked with 2 of 3 forged", s.KeystoneUnlocked);
+
+        Check("repro CARE: CAR accepted into the jar",
+            s.Submit("car").Kind == WordSubmissionKind.BonusWord);
+
+        double flowBefore = s.Flow;
+        WordSubmission jarRepeat = s.Submit("car");
+        Check("repro CARE: duplicate bonus is AlreadyInJar, not AlreadyFound",
+            jarRepeat.Kind == WordSubmissionKind.AlreadyInJar, jarRepeat.Kind.ToString());
+        Check("repro CARE: jar duplicate is a repeat, never a penalty",
+            jarRepeat.IsRepeat && !jarRepeat.IsPenalty);
+        Check("repro CARE: jar duplicate keeps Flow and clean streak",
+            Math.Abs(s.Flow - flowBefore) < 0.001 && s.CleanStreak == 2,
+            $"flow={s.Flow} streak={s.CleanStreak}");
+        Check("repro CARE: jar duplicate does not double-count", s.BonusJar.Count == 1);
+
+        // A duplicate SOLUTION word is a different verdict, and it knows its slot.
+        WordSubmission forgedAgain = s.Submit("arc");
+        Check("repro CARE: duplicate solution is AlreadyFound",
+            forgedAgain.Kind == WordSubmissionKind.AlreadyFound, forgedAgain.Kind.ToString());
+        Check("repro CARE: duplicate solution carries its slot index", forgedAgain.SlotIndex >= 0);
+        Check("repro CARE: both duplicate kinds are non-punitive repeats",
+            forgedAgain.IsRepeat && !forgedAgain.IsPenalty);
+        Check("repro CARE: repeats never counted as wrong attempts", s.WrongAttempts == 0,
+            s.WrongAttempts.ToString());
+
+        // UI-65: the revealed answer is still playable after all of the above.
+        WordSubmission keystone = s.Submit("care");
+        Check("repro CARE: revealed keystone accepted after repeats and with a stale trie",
+            keystone.Kind == WordSubmissionKind.SolutionWord && keystone.ForgeCompleted && s.Completed,
+            keystone.Kind.ToString());
+        Check("repro CARE: keystone gating still held before the reveal",
+            new ForgeSession(forge, dict, cfg, RuneEffects.None)
+                .Submit("care").Kind == WordSubmissionKind.KeystoneLocked);
     }
 
     private static void TestRunState(BalanceConfig cfg)
@@ -522,6 +656,19 @@ internal static class Program
             forges.Select(f => f.ForgeId).Distinct().Count() == forges.Count &&
             forges.Min(f => f.ForgeId) == 1 && forges.Max(f => f.ForgeId) == 20);
         Check("no duplicate forge checksums", forges.Select(f => f.Checksum).Distinct().Count() == forges.Count);
+
+        // The pack JSON and words_en.dat come from DIFFERENT generators. A gap
+        // here used to surface in play as "Not in the dictionary" for a word
+        // Give Up had just revealed, so CI must catch it at the source.
+        var gaps = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (ForgeData forge in forges)
+        {
+            foreach (string word in forge.SolutionWords)
+                if (!dict.Contains(word)) gaps.Add(word.ToLowerInvariant());
+            foreach (GridSlot slot in forge.Slots)
+                if (!dict.Contains(slot.Word)) gaps.Add(slot.Word.ToLowerInvariant());
+        }
+        Check("every shipped answer is in words_en.dat", gaps.Count == 0, string.Join(",", gaps));
 
         var blocklist = new HashSet<string>(StringComparer.Ordinal);
         var common = LexiForge.Tools.WordList.Common;
